@@ -14,11 +14,13 @@ import (
 type CatalogType string
 
 const (
-	CatalogTypeOfficial CatalogType = "official" // Docker official catalog
-	CatalogTypeTeam     CatalogType = "team"     // Team/organization catalog
-	CatalogTypePersonal CatalogType = "personal" // User personal catalog
-	CatalogTypeImported CatalogType = "imported" // Imported from external source
-	CatalogTypeCustom   CatalogType = "custom"   // Custom user-created catalog
+	CatalogTypeOfficial      CatalogType = "official"       // Docker official catalog
+	CatalogTypeTeam          CatalogType = "team"           // Team/organization catalog
+	CatalogTypePersonal      CatalogType = "personal"       // User personal catalog
+	CatalogTypeImported      CatalogType = "imported"       // Imported from external source
+	CatalogTypeCustom        CatalogType = "custom"         // Custom user-created catalog
+	CatalogTypeAdminBase     CatalogType = "admin_base"     // Admin-controlled base catalog
+	CatalogTypeSystemDefault CatalogType = "system_default" // System default catalog
 )
 
 // CatalogStatus represents the status of a catalog
@@ -67,12 +69,17 @@ type Catalog struct {
 	SourceType   string            `json:"source_type,omitempty"   db:"source_type"`
 	SourceConfig map[string]string `json:"source_config,omitempty" db:"source_config"`
 
-	// Metadata
-	Tags       []string `json:"tags,omitempty"       db:"tags"`
-	Homepage   string   `json:"homepage,omitempty"   db:"homepage"`
-	Repository string   `json:"repository,omitempty" db:"repository"`
-	License    string   `json:"license,omitempty"    db:"license"`
-	Maintainer string   `json:"maintainer,omitempty" db:"maintainer"`
+	// Server registry for file-based catalogs
+	Registry        map[string]*ServerConfig `json:"registry,omitempty"         yaml:"registry,omitempty"`
+	DisabledServers map[string]bool          `json:"disabled_servers,omitempty" yaml:"disabled_servers,omitempty"`
+
+	// Metadata - flexible key-value storage
+	Metadata   map[string]interface{} `json:"metadata,omitempty"   yaml:"metadata,omitempty"`
+	Tags       []string               `json:"tags,omitempty"                                 db:"tags"`
+	Homepage   string                 `json:"homepage,omitempty"                             db:"homepage"`
+	Repository string                 `json:"repository,omitempty"                           db:"repository"`
+	License    string                 `json:"license,omitempty"                              db:"license"`
+	Maintainer string                 `json:"maintainer,omitempty"                           db:"maintainer"`
 
 	// Statistics
 	ServerCount   int        `json:"server_count"   db:"server_count"`
@@ -169,6 +176,23 @@ type User struct {
 	ID          uuid.UUID `json:"id"`
 	Email       string    `json:"email"`
 	DisplayName string    `json:"display_name"`
+}
+
+// ServerConfig represents a server configuration in the catalog registry
+type ServerConfig struct {
+	Name        string                 `json:"name"                   yaml:"name"`
+	DisplayName string                 `json:"display_name,omitempty" yaml:"display_name,omitempty"`
+	Description string                 `json:"description,omitempty"  yaml:"description,omitempty"`
+	Image       string                 `json:"image"                  yaml:"image"`
+	Tag         string                 `json:"tag,omitempty"          yaml:"tag,omitempty"`
+	Command     []string               `json:"command,omitempty"      yaml:"command,omitempty"`
+	Environment map[string]string      `json:"environment,omitempty"  yaml:"environment,omitempty"`
+	Volumes     []VolumeMapping        `json:"volumes,omitempty"      yaml:"volumes,omitempty"`
+	Ports       []PortMapping          `json:"ports,omitempty"        yaml:"ports,omitempty"`
+	WorkingDir  string                 `json:"working_dir,omitempty"  yaml:"working_dir,omitempty"`
+	Metadata    map[string]interface{} `json:"metadata,omitempty"     yaml:"metadata,omitempty"`
+	IsEnabled   bool                   `json:"is_enabled"             yaml:"is_enabled"`
+	IsMandatory bool                   `json:"is_mandatory,omitempty" yaml:"is_mandatory,omitempty"` // Cannot be disabled by users
 }
 
 // CatalogFilter represents query filters for catalogs
