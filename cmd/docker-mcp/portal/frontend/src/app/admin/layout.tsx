@@ -10,6 +10,7 @@ import {
   FileText,
   BarChart3,
   Settings,
+  BookOpen,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -35,6 +36,13 @@ const adminNavItems = [
     href: '/admin/users',
     icon: Users,
     description: 'Manage users, roles, and permissions',
+    permissions: ['admin', 'super_admin'],
+  },
+  {
+    title: 'Catalog Management',
+    href: '/admin/catalogs',
+    icon: BookOpen,
+    description: 'Manage admin base catalogs and server configurations',
     permissions: ['admin', 'super_admin'],
   },
   {

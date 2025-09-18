@@ -24,6 +24,7 @@ import (
 	"github.com/jrmatherly/mcp-hub-gateway/cmd/docker-mcp/portal/executor"
 	"github.com/jrmatherly/mcp-hub-gateway/cmd/docker-mcp/portal/realtime"
 	"github.com/jrmatherly/mcp-hub-gateway/cmd/docker-mcp/portal/security/audit"
+	"github.com/jrmatherly/mcp-hub-gateway/cmd/docker-mcp/portal/security/crypto"
 	"github.com/jrmatherly/mcp-hub-gateway/cmd/docker-mcp/portal/security/ratelimit"
 	"github.com/jrmatherly/mcp-hub-gateway/cmd/docker-mcp/portal/server/handlers"
 	"github.com/jrmatherly/mcp-hub-gateway/cmd/docker-mcp/portal/server/middleware"
@@ -149,18 +150,19 @@ func (r *RateLimiterAdapter) Reset(userID string, command executor.CommandType) 
 
 // Server represents the MCP Portal HTTP server
 type Server struct {
-	config          *config.Config
-	httpServer      *http.Server
-	ginEngine       *gin.Engine
-	executor        executor.Executor
-	authService     *auth.AzureADService
-	sessionMgr      auth.SessionManager
-	cache           cache.Cache
-	db              *database.Pool
-	rateLimiter     ratelimit.RateLimiter
-	auditLogger     audit.Logger
-	catalogService  catalog.CatalogService
-	realtimeManager realtime.ConnectionManager
+	config                  *config.Config
+	httpServer              *http.Server
+	ginEngine               *gin.Engine
+	executor                executor.Executor
+	authService             *auth.AzureADService
+	sessionMgr              auth.SessionManager
+	cache                   cache.Cache
+	db                      *database.Pool
+	rateLimiter             ratelimit.RateLimiter
+	auditLogger             audit.Logger
+	catalogService          catalog.CatalogService
+	multiUserCatalogService *catalog.MultiUserCatalogService
+	realtimeManager         realtime.ConnectionManager
 }
 
 // Config holds server configuration
@@ -249,6 +251,45 @@ func NewServer(cfg *config.Config) (*Server, error) {
 		redisCache,
 	)
 
+	// Initialize multi-user catalog service
+	// For now, we'll use a default encryption key if not provided
+	// In production, this should come from configuration
+	var encryptionKey []byte
+	if cfg.Security.JWTSigningKey != "" {
+		// Use first 32 bytes of JWT signing key as encryption key
+		// This is a temporary solution - in production, use a separate encryption key
+		encryptionKey = []byte(cfg.Security.JWTSigningKey)
+		if len(encryptionKey) > 32 {
+			encryptionKey = encryptionKey[:32]
+		} else if len(encryptionKey) < 32 {
+			// Pad with zeros if key is too short
+			padded := make([]byte, 32)
+			copy(padded, encryptionKey)
+			encryptionKey = padded
+		}
+	} else {
+		// Generate a default key for development
+		encryptionKey = []byte("default-encryption-key-32-bytes!")
+	}
+
+	// Initialize encryption service
+	encryptionService, err := crypto.NewAESGCMService(nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize encryption service: %w", err)
+	}
+
+	// Initialize multi-user catalog service
+	multiUserCatalogService, err := catalog.CreateMultiUserCatalogService(
+		catalogRepo,
+		cliExecutor,
+		auditLogger,
+		redisCache,
+		encryptionService,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize multi-user catalog service: %w", err)
+	}
+
 	// Initialize realtime connection manager
 	realtimeConfig := realtime.DefaultConnectionConfig()
 	realtimeManager, err := realtime.CreateConnectionManager(auditLogger, realtimeConfig)
@@ -261,17 +302,18 @@ func NewServer(cfg *config.Config) (*Server, error) {
 
 	// Create server
 	server := &Server{
-		config:          cfg,
-		ginEngine:       ginEngine,
-		executor:        cliExecutor,
-		authService:     authService,
-		sessionMgr:      sessionMgr,
-		cache:           redisCache,
-		db:              dbPool,
-		rateLimiter:     rateLimiter,
-		auditLogger:     auditLogger,
-		catalogService:  catalogService,
-		realtimeManager: realtimeManager,
+		config:                  cfg,
+		ginEngine:               ginEngine,
+		executor:                cliExecutor,
+		authService:             authService,
+		sessionMgr:              sessionMgr,
+		cache:                   redisCache,
+		db:                      dbPool,
+		rateLimiter:             rateLimiter,
+		auditLogger:             auditLogger,
+		catalogService:          catalogService,
+		multiUserCatalogService: multiUserCatalogService,
+		realtimeManager:         realtimeManager,
 	}
 
 	// Setup middleware and routes
@@ -328,6 +370,10 @@ func (s *Server) setupRoutes() {
 
 	// Register catalog routes
 	handlers.RegisterCatalogRoutes(protected, catalogHandler)
+
+	// Register multi-user catalog routes
+	multiUserHandler := handlers.CreateCatalogMultiUserHandler(s.multiUserCatalogService)
+	handlers.RegisterMultiUserRoutes(protected, multiUserHandler)
 
 	// Legacy server management endpoints (for backward compatibility)
 	servers := protected.Group("/servers")

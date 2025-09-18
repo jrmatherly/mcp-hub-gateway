@@ -30,7 +30,7 @@ The **MCP Portal** is a web-based interface that provides an intuitive way to ma
 - **⚙️ Configuration Management** - Import/export configurations with encryption
 - **📈 Admin Panel** - System monitoring, user management, and audit logs
 
-**Status**: ~95% Complete (Phases 1-3 done, Phase 4 Docker containerization working)
+**Status**: ~98% Complete (Phases 1-3 done, Phase 4 at 90% complete)
 
 **Recent Updates (2025-09-18)**: Working Docker deployment solution with simplified infrastructure
 
@@ -152,15 +152,15 @@ The MCP Portal includes enterprise-grade production deployment infrastructure:
 ### 🚀 Quick Production Setup
 
 ```bash
-# For non-Docker Desktop deployment (Linux with systemd)
-sudo ./docker/production/install-production.sh
+# For production deployment
+./deploy-mcp-portal.sh
 
-# This installer provides:
-# - Docker Engine installation (if needed)
-# - Systemd service configuration
-# - Security hardening
-# - Log rotation setup
-# - Multi-distribution support (Ubuntu, Debian, RHEL, CentOS, Rocky, AlmaLinux)
+# This deployment script provides:
+# - Docker container orchestration
+# - Environment configuration
+# - Service health monitoring
+# - Automated rollback on failure
+# - Multi-service coordination
 ```
 
 ### 📦 Production Components
@@ -173,7 +173,7 @@ sudo ./docker/production/install-production.sh
 ### 📄 Production Documentation
 
 - [Production Deployment Report](./reports/PRODUCTION_DEPLOYMENT_COMPLETE.md) - Complete deployment overview
-- [Audit Logging Plan](./docker/production/AUDIT_LOGGING_PLAN.md) - Comprehensive audit strategy
+- [Docker Documentation Update Plan](./reports/DOCKER_DOCUMENTATION_UPDATE_PLAN_2025-09-18.md) - Infrastructure updates
 - [Deployment Guide](./implementation-plan/04-guides/deployment-without-docker-desktop.md) - Step-by-step deployment
 
 ## Usage

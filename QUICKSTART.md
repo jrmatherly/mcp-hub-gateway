@@ -9,9 +9,9 @@ This repository contains **two projects**:
 1. **🔧 MCP CLI Plugin & Gateway** - Docker CLI plugin for MCP server management
 2. **🌐 MCP Portal** - Web interface with Azure AD auth and multi-user support
 
-**Current Status**: Portal is ~95% complete (Phases 1-3 done, Phase 4 Docker containerization working)
+**Current Status**: Portal is ~91% complete (Phases 1-3 done, Phase 4 at 91% complete)
 
-**Recent Updates (2025-09-18)**: Simplified Docker deployment with working containerization solution
+**Recent Updates (2025-01-20)**: Fixed catalog test compilation errors, working on test coverage expansion
 
 ## Prerequisites
 
@@ -25,8 +25,8 @@ This repository contains **two projects**:
 
 - **Option 1: Docker Desktop** (Recommended for local development)
 - **Option 2: Standalone Docker Engine** (For servers/production)
-  - Linux: Use the production installer: `sudo ./docker/production/install-production.sh`
-  - Or install manually: `curl -fsSL https://get.docker.com | sh`
+  - Use the deployment script: `./deploy-mcp-portal.sh`
+  - Or install Docker manually: `curl -fsSL https://get.docker.com | sh`
 
 ### For Portal Development (Additional)
 
@@ -112,7 +112,7 @@ echo "Use this JWT secret: $JWT_SECRET"
 ### 2. Production Deployment with Docker (Working Solution)
 
 ```bash
-# Use the Docker solution (Phase 4 - 95% complete)
+# Use the Docker solution (Phase 4 - 90% complete)
 ./deploy-mcp-portal.sh
 
 # Or manually with docker-compose
@@ -144,8 +144,8 @@ Services will be available at:
 # Start development environment with hot reload
 make portal-dev-up
 
-# Or using docker-compose directly
-docker-compose -f docker-compose.yaml -f docker-compose.override.yaml up
+# Or using docker-compose directly for development
+docker-compose -f docker-compose.mcp-portal.yml up
 
 # For local development without containers
 # Backend (Terminal 1)
@@ -479,10 +479,10 @@ make docker-portal-all    # Both services
 # Production deployment
 docker-compose up -d      # Start production stack
 
-# Production without Docker Desktop (using standalone Docker Engine)
+# Production deployment (using standalone Docker Engine)
 # Note: Ensure your user has Docker socket access:
 sudo usermod -aG docker $USER  # Then log out/in for group changes
-docker-compose -f docker-compose.prod.yaml up -d
+docker-compose -f docker-compose.mcp-portal.yml up -d
 ```
 
 ## 📚 Next Steps
