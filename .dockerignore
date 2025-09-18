@@ -1,0 +1,13 @@
+*
+!/cmd
+!/tools/docker-mcp-bridge/**/*
+!/go.mod
+!/go.sum
+!/.golangci.yml
+!/vendor
+!/docs
+!/server.go
+!/test/servers
+!/test/testdata
+!/docker/scripts
+!/docker/nginx

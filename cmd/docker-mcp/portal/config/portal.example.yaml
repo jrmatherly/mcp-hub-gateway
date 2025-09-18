@@ -1,0 +1,210 @@
+# MCP Portal Configuration Template
+# Copy this file to portal.yaml and customize for your environment
+#
+# SECURITY NOTICE: Never commit secrets to version control!
+# Use environment variables for sensitive values (see bottom of file)
+
+# =============================================================================
+# REQUIRED CONFIGURATION - CUSTOMIZE THESE VALUES
+# =============================================================================
+
+environment: development # Change to: development, staging, production
+
+# =============================================================================
+# Server Configuration
+# =============================================================================
+server:
+  host: 0.0.0.0 # Use localhost for local-only access
+  port: 3000 # Change for production (e.g., 8080, 443)
+  read_timeout: 30s
+  write_timeout: 30s
+  shutdown_timeout: 10s
+  max_header_bytes: 1048576
+
+  # TLS/HTTPS - Enable for production
+  tls_enabled: false
+  tls_cert_file: "" # Path to your SSL certificate
+  tls_key_file: "" # Path to your SSL private key
+
+# =============================================================================
+# Database Configuration
+# =============================================================================
+database:
+  host: localhost
+  port: 5432
+  database: mcp_portal
+  username: portal
+  # password: SET_VIA_ENVIRONMENT  # Use MCP_PORTAL_DATABASE_PASSWORD
+
+  ssl_mode: prefer # Use 'require' for production
+  max_connections: 20
+  min_connections: 2
+  max_conn_lifetime: 1h
+  max_conn_idle_time: 10m
+  health_check_period: 30s
+  statement_timeout: 30s
+
+# =============================================================================
+# Redis Configuration
+# =============================================================================
+redis:
+  addrs:
+    - localhost:6379
+  # password: SET_VIA_ENVIRONMENT  # Use MCP_PORTAL_REDIS_PASSWORD
+  db: 0
+  max_retries: 3
+  min_retry_backoff: 8ms
+  max_retry_backoff: 512ms
+  dial_timeout: 5s
+  read_timeout: 3s
+  write_timeout: 3s
+  pool_size: 10
+  min_idle_conns: 2
+  max_idle_time: 5m
+  pool_timeout: 4s
+  session_ttl: 24h
+
+# =============================================================================
+# Azure AD Authentication - REQUIRED
+# =============================================================================
+azure:
+  # GET THESE VALUES FROM AZURE PORTAL:
+  tenant_id: "YOUR_TENANT_ID_HERE" # Azure AD Directory (tenant) ID
+  client_id: "YOUR_CLIENT_ID_HERE" # Application (client) ID
+  # client_secret: SET_VIA_ENVIRONMENT        # Use MCP_PORTAL_AZURE_CLIENT_SECRET
+
+  # MUST MATCH YOUR AZURE APP REGISTRATION:
+  redirect_url: "http://localhost:3000/auth/callback"
+  authority: "https://login.microsoftonline.com"
+
+  scopes:
+    - openid
+    - profile
+    - email
+
+# =============================================================================
+# Security Configuration
+# =============================================================================
+security:
+  # jwt_signing_key: SET_VIA_ENVIRONMENT     # Use MCP_PORTAL_SECURITY_JWT_SIGNING_KEY
+  jwt_issuer: "mcp-portal"
+  jwt_audience:
+    - "mcp-portal"
+
+  access_token_ttl: 15m
+  refresh_token_ttl: 7d
+  csrf_token_ttl: 24h
+
+  rate_limit_requests: 100
+  rate_limit_window: 1m
+
+  # CORS - Add your frontend URLs
+  allowed_origins:
+    - "http://localhost:3000"
+    - "http://localhost:3001"
+    # - "https://your-production-domain.com"
+
+  allowed_methods:
+    - GET
+    - POST
+    - PUT
+    - DELETE
+    - OPTIONS
+
+  allowed_headers:
+    - Content-Type
+    - Authorization
+    - X-CSRF-Token
+    - X-Request-ID
+
+  cors_max_age: 86400
+
+# =============================================================================
+# CLI Integration
+# =============================================================================
+cli:
+  binary_path: docker
+  working_dir: /tmp/mcp-portal
+  docker_socket: /var/run/docker.sock
+  command_timeout: 5m
+  max_concurrent: 10
+  output_buffer_size: 1048576
+  enable_debug: false # Set to true for development
+
+# =============================================================================
+# REQUIRED ENVIRONMENT VARIABLES
+# =============================================================================
+#
+# Create a .env file or set these environment variables:
+#
+# # Database
+# export MCP_PORTAL_DATABASE_PASSWORD="your_secure_db_password"
+#
+# # Redis (if using password)
+# export MCP_PORTAL_REDIS_PASSWORD="your_redis_password"
+#
+# # Azure AD (REQUIRED)
+# export MCP_PORTAL_AZURE_TENANT_ID="12345678-1234-1234-1234-123456789abc"
+# export MCP_PORTAL_AZURE_CLIENT_ID="87654321-4321-4321-4321-cba987654321"
+# export MCP_PORTAL_AZURE_CLIENT_SECRET="your_azure_client_secret"
+#
+# # JWT Security (REQUIRED - Generate a 256-bit random key)
+# export MCP_PORTAL_SECURITY_JWT_SIGNING_KEY="your_256_bit_random_secret_key"
+#
+# # Optional environment overrides
+# export MCP_PORTAL_ENVIRONMENT="development"
+# export MCP_PORTAL_SERVER_PORT="3000"
+#
+# =============================================================================
+# AZURE AD SETUP INSTRUCTIONS
+# =============================================================================
+#
+# 1. Go to Azure Portal (portal.azure.com)
+# 2. Navigate to Azure Active Directory > App registrations
+# 3. Click "New registration"
+# 4. Enter name: "MCP Portal"
+# 5. Set redirect URI: http://localhost:3000/auth/callback (or your domain)
+# 6. After creation, note the:
+#    - Application (client) ID
+#    - Directory (tenant) ID
+# 7. Go to "Certificates & secrets"
+# 8. Create a new client secret
+# 9. Copy all values to your environment variables
+#
+# =============================================================================
+# PRODUCTION DEPLOYMENT CHECKLIST
+# =============================================================================
+#
+# □ Set environment to "production"
+# □ Enable TLS (tls_enabled: true)
+# □ Configure proper SSL certificates
+# □ Set database ssl_mode to "require"
+# □ Use strong, unique JWT signing key (256-bit)
+# □ Configure production CORS origins
+# □ Set up proper monitoring and logging
+# □ Use encrypted connection strings
+# □ Review rate limiting settings
+# □ Test backup and recovery procedures
+#
+# =============================================================================
+# DEVELOPMENT VS PRODUCTION DIFFERENCES
+# =============================================================================
+#
+# Development:
+#   - environment: development
+#   - server.host: localhost
+#   - server.tls_enabled: false
+#   - database.ssl_mode: prefer
+#   - cli.enable_debug: true
+#   - Relaxed CORS origins
+#
+# Production:
+#   - environment: production
+#   - server.host: 0.0.0.0
+#   - server.tls_enabled: true
+#   - database.ssl_mode: require
+#   - cli.enable_debug: false
+#   - Strict CORS origins
+#   - Higher connection limits
+#
+# =============================================================================

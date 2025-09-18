@@ -1,0 +1,249 @@
+# MCP Portal Configuration File
+# Production-ready configuration for the MCP Portal Go backend service
+#
+# This configuration follows modern Go best practices with Viper configuration management.
+# For sensitive values, use environment variables with MCP_PORTAL_ prefix.
+# Example: MCP_PORTAL_DATABASE_PASSWORD, MCP_PORTAL_AZURE_CLIENT_SECRET
+
+# =============================================================================
+# Environment Configuration
+# =============================================================================
+# Valid values: development, staging, production
+# Can be overridden with MCP_PORTAL_ENVIRONMENT
+environment: development
+
+# =============================================================================
+# HTTP Server Configuration
+# =============================================================================
+server:
+  # Server bind address - use 0.0.0.0 for containers, localhost for local dev
+  host: 0.0.0.0
+
+  # HTTP port - standard port 3000 for development
+  # Production: consider 8080 or 443 (with TLS)
+  port: 3000
+
+  # Timeout settings using Go duration format
+  read_timeout: 30s # Time to read request headers and body
+  write_timeout: 30s # Time to write response
+  shutdown_timeout: 10s # Graceful shutdown timeout
+
+  # Security settings
+  max_header_bytes: 1048576 # 1MB - prevent header DoS attacks
+
+  # TLS/HTTPS Configuration
+  tls_enabled: false
+  # Production: Set these paths and enable TLS
+  tls_cert_file: "" # Path to TLS certificate file
+  tls_key_file: "" # Path to TLS private key file
+
+# =============================================================================
+# PostgreSQL Database Configuration
+# =============================================================================
+database:
+  # Connection details
+  host: localhost
+  port: 5432
+  database: mcp_portal
+  username: portal
+  # SECURITY: Set password via environment variable
+  # password: ""  # Use MCP_PORTAL_DATABASE_PASSWORD instead
+
+  # SSL configuration - critical for production
+  ssl_mode: prefer # Values: disable, require, verify-ca, verify-full
+
+  # Connection pool settings for high performance
+  max_connections: 20 # Maximum concurrent connections
+  min_connections: 2 # Minimum idle connections maintained
+  max_conn_lifetime: 1h # Maximum connection reuse time
+  max_conn_idle_time: 10m # Idle timeout before cleanup
+
+  # Health and performance monitoring
+  health_check_period: 30s # Connection health check interval
+  statement_timeout: 30s # Query execution timeout
+
+# =============================================================================
+# Redis Cache Configuration
+# =============================================================================
+redis:
+  # Redis cluster/instance addresses
+  addrs:
+    - localhost:6379
+  # SECURITY: Set password via environment variable
+  # password: ""  # Use MCP_PORTAL_REDIS_PASSWORD instead
+
+  # Database selection (0-15 for standard Redis)
+  db: 0
+
+  # Retry and timeout configuration
+  max_retries: 3 # Failed operation retries
+  min_retry_backoff: 8ms # Minimum backoff between retries
+  max_retry_backoff: 512ms # Maximum backoff between retries
+  dial_timeout: 5s # Connection establishment timeout
+  read_timeout: 3s # Read operation timeout
+  write_timeout: 3s # Write operation timeout
+
+  # Connection pool settings
+  pool_size: 10 # Maximum connections in pool
+  min_idle_conns: 2 # Minimum idle connections
+  max_idle_time: 5m # Idle connection cleanup time
+  pool_timeout: 4s # Pool checkout timeout
+
+  # Session management
+  session_ttl: 24h # User session duration
+
+# =============================================================================
+# Azure AD Authentication Configuration
+# =============================================================================
+azure:
+  # REQUIRED: Azure AD tenant configuration
+  tenant_id: "" # Your Azure AD tenant ID
+  client_id: "" # Application (client) ID from Azure portal
+  # SECURITY: Set client secret via environment variable
+  # client_secret: ""     # Use MCP_PORTAL_AZURE_CLIENT_SECRET instead
+
+  # OAuth2 flow configuration
+  redirect_url: "http://localhost:3000/auth/callback" # Must match Azure app registration
+  authority: "https://login.microsoftonline.com" # Microsoft identity platform
+
+  # Requested OAuth2 scopes
+  scopes:
+    - openid
+    - profile
+    - email
+
+# =============================================================================
+# Security Configuration
+# =============================================================================
+security:
+  # JWT Token Configuration
+  # SECURITY: Set signing key via environment variable
+  # jwt_signing_key: ""   # Use MCP_PORTAL_JWT_SIGNING_KEY instead (256-bit key)
+  jwt_issuer: "mcp-portal"
+  jwt_audience:
+    - "mcp-portal"
+
+  # Token lifetimes
+  access_token_ttl: 15m # Short-lived for security
+  refresh_token_ttl: 7d # Longer-lived for user convenience
+  csrf_token_ttl: 24h # CSRF protection token lifetime
+
+  # Rate limiting configuration
+  rate_limit_requests: 100 # Requests per window
+  rate_limit_window: 1m # Rate limit time window
+
+  # CORS (Cross-Origin Resource Sharing) configuration
+  allowed_origins:
+    - "http://localhost:3000" # Development frontend
+    - "http://localhost:3001" # Alternative dev port
+    # Production: Add your actual frontend domains
+    # - "https://your-domain.com"
+
+  allowed_methods:
+    - GET
+    - POST
+    - PUT
+    - DELETE
+    - OPTIONS
+
+  allowed_headers:
+    - Content-Type
+    - Authorization
+    - X-CSRF-Token
+    - X-Request-ID
+
+  cors_max_age: 86400 # Preflight cache duration (24 hours)
+
+# =============================================================================
+# CLI Integration Configuration
+# =============================================================================
+cli:
+  # Docker CLI configuration
+  binary_path: docker # Path to docker binary (auto-detected from PATH)
+  working_dir: /tmp/mcp-portal # Working directory for CLI operations
+  docker_socket: /var/run/docker.sock # Docker daemon socket
+
+  # Execution settings
+  command_timeout: 5m # Maximum time for CLI command execution
+  max_concurrent: 10 # Maximum concurrent CLI operations
+  output_buffer_size: 1048576 # 1MB CLI output buffer
+
+  # Development settings
+  enable_debug: false # Enable CLI debug output (verbose logging)
+
+# =============================================================================
+# Environment-Specific Overrides
+# =============================================================================
+
+# Development Environment Overrides
+# Uncomment and modify for local development
+# development:
+#   server:
+#     host: localhost
+#     port: 3000
+#   security:
+#     allowed_origins:
+#       - "http://localhost:3000"
+#       - "http://localhost:3001"
+#   cli:
+#     enable_debug: true
+
+# Production Environment Overrides
+# Uncomment and modify for production deployment
+# production:
+#   server:
+#     host: 0.0.0.0
+#     port: 8080
+#     tls_enabled: true
+#     tls_cert_file: /etc/ssl/certs/portal.crt
+#     tls_key_file: /etc/ssl/private/portal.key
+#   database:
+#     ssl_mode: require
+#     max_connections: 50
+#   redis:
+#     pool_size: 20
+#   security:
+#     allowed_origins:
+#       - "https://your-production-domain.com"
+#     rate_limit_requests: 1000
+
+# =============================================================================
+# Environment Variable Reference
+# =============================================================================
+#
+# Sensitive configuration values should be set via environment variables:
+#
+# Database:
+#   MCP_PORTAL_DATABASE_PASSWORD=your_secure_db_password
+#
+# Redis:
+#   MCP_PORTAL_REDIS_PASSWORD=your_redis_password
+#
+# Azure AD:
+#   MCP_PORTAL_AZURE_TENANT_ID=your_tenant_id
+#   MCP_PORTAL_AZURE_CLIENT_ID=your_client_id
+#   MCP_PORTAL_AZURE_CLIENT_SECRET=your_client_secret
+#   MCP_PORTAL_AZURE_REDIRECT_URL=https://your-domain.com/auth/callback
+#
+# Security:
+#   MCP_PORTAL_SECURITY_JWT_SIGNING_KEY=your_256_bit_secret_key
+#
+# General:
+#   MCP_PORTAL_ENVIRONMENT=production
+#   MCP_PORTAL_SERVER_HOST=0.0.0.0
+#   MCP_PORTAL_SERVER_PORT=8080
+#
+# =============================================================================
+# Docker Compose Integration
+# =============================================================================
+#
+# Example docker-compose.yml environment section:
+#
+# environment:
+#   - MCP_PORTAL_ENVIRONMENT=production
+#   - MCP_PORTAL_DATABASE_PASSWORD=${DB_PASSWORD}
+#   - MCP_PORTAL_REDIS_PASSWORD=${REDIS_PASSWORD}
+#   - MCP_PORTAL_AZURE_CLIENT_SECRET=${AZURE_CLIENT_SECRET}
+#   - MCP_PORTAL_SECURITY_JWT_SIGNING_KEY=${JWT_SIGNING_KEY}
+#
+# =============================================================================

@@ -1,0 +1,75 @@
+{
+  "$schema": "https://unpkg.com/knip@latest/schema.json",
+  "entry": [
+    "src/app/**/page.tsx",
+    "src/app/**/layout.tsx",
+    "src/app/**/route.ts",
+    "src/app/api/**/route.ts"
+  ],
+  "project": ["src/**/*.{ts,tsx,js,jsx}"],
+  "ignore": [
+    "**/*.test.{ts,tsx}",
+    "**/*.spec.{ts,tsx}",
+    "**/*.stories.{ts,tsx}",
+    "**/tests/**",
+    "**/coverage/**",
+    "**/.next/**",
+    "**/dist/**",
+    "**/build/**"
+  ],
+  "ignoreDependencies": [
+    "@types/node",
+    "typescript",
+    "eslint-config-next",
+    "postcss",
+    "autoprefixer"
+  ],
+  "ignoreBinaries": ["next"],
+  "next": {
+    "entry": [
+      "next.config.js",
+      "instrumentation.ts",
+      "middleware.ts",
+      "src/app/**/page.tsx",
+      "src/app/**/layout.tsx",
+      "src/app/**/route.ts"
+    ]
+  },
+  "tailwind": {
+    "config": ["tailwind.config.js", "tailwind-performance.config.js"]
+  },
+  "typescript": {
+    "config": ["tsconfig.json"]
+  },
+  "vitest": {
+    "config": ["vitest.config.ts"],
+    "entry": ["tests/**/*.test.{ts,tsx}", "src/**/*.test.{ts,tsx}"]
+  },
+  "prettier": {
+    "config": [".prettierrc"]
+  },
+  "eslint": {
+    "config": ["eslint.config.mjs"]
+  },
+  "postcss": {
+    "config": ["postcss.config.mjs"]
+  },
+  "rules": {
+    "files": "error",
+    "dependencies": "error",
+    "devDependencies": "error",
+    "unlisted": "error",
+    "binaries": "error",
+    "unresolved": "error",
+    "exports": "error",
+    "types": "error",
+    "nsExports": "error",
+    "duplicates": "warn",
+    "enumMembers": "warn",
+    "classMembers": "warn"
+  },
+  "ignoreExportsUsedInFile": {
+    "interface": true,
+    "type": true
+  }
+}

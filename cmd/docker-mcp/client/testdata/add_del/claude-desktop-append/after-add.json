@@ -1,0 +1,7 @@
+{
+  "foo": true,
+  "mcpServers": {
+    "something": {},
+    "my-server": { "command": "docker", "args": ["mcp", "gateway", "run"] }
+  }
+}

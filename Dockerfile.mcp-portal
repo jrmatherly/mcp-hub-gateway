@@ -1,0 +1,186 @@
+# =============================================================================
+# MCP Portal - Working Dockerfile
+# =============================================================================
+# Simplified build that addresses the build issues
+# =============================================================================
+
+ARG GO_VERSION=1.24.5
+ARG NODE_VERSION=22
+
+# =============================================================================
+# Stage 1: Go Backend Build
+# =============================================================================
+FROM golang:${GO_VERSION}-alpine AS backend-builder
+
+# Install build dependencies
+RUN apk add --no-cache git make gcc musl-dev
+
+WORKDIR /build
+
+# Copy go mod files for dependency caching
+COPY go.mod go.sum ./
+RUN go mod download && go mod verify
+
+# Copy source code
+COPY . .
+
+# Build the docker-mcp binary with portal command
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+    go build -trimpath -ldflags "-s -w" \
+    -o docker-mcp ./cmd/docker-mcp
+
+# =============================================================================
+# Stage 2: Frontend Build
+# =============================================================================
+FROM node:${NODE_VERSION}-alpine AS frontend-builder
+
+WORKDIR /app
+
+# Copy package files and install dependencies
+COPY cmd/docker-mcp/portal/frontend/package*.json ./
+RUN npm ci
+
+# Copy frontend source
+COPY cmd/docker-mcp/portal/frontend/ ./
+
+# Build Next.js application with proper environment
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+
+# Build with error handling
+RUN npm run build || \
+    (echo "Build failed, attempting standalone build..." && \
+    echo '{"output": "standalone"}' > .next-build-config.json && \
+    npm run build)
+
+# Prepare files for copying (handle both regular and standalone builds)
+RUN mkdir -p /app/prepared && \
+    cp -r .next /app/prepared/.next && \
+    cp -r public /app/prepared/public && \
+    cp package.json /app/prepared/package.json && \
+    cp -r node_modules /app/prepared/node_modules && \
+    if [ -d ".next/standalone" ]; then \
+    cp -r .next/standalone/* /app/prepared/ 2>/dev/null || true; \
+    fi && \
+    if [ -d ".next/static" ] && [ ! -d "/app/prepared/.next/static" ]; then \
+    cp -r .next/static /app/prepared/.next/static 2>/dev/null || true; \
+    fi
+
+# =============================================================================
+# Stage 3: Runtime Image
+# =============================================================================
+FROM node:${NODE_VERSION}-alpine AS runtime
+
+# Install runtime dependencies
+RUN apk add --no-cache \
+    ca-certificates \
+    tzdata \
+    curl \
+    docker-cli \
+    postgresql-client \
+    && rm -rf /var/cache/apk/*
+
+# Create non-root user with proper Docker access
+RUN addgroup -g 1001 -S portal && \
+    adduser -u 1001 -S portal -G portal && \
+    adduser portal docker || true
+
+# Create application directories
+RUN mkdir -p /app/backend /app/frontend /app/data /app/logs && \
+    chown -R portal:portal /app
+
+WORKDIR /app
+
+# Copy backend binary (destination is a file, not a directory)
+COPY --from=backend-builder --chown=portal:portal /build/docker-mcp /app/backend/docker-mcp
+
+# Copy all prepared frontend files in one go
+COPY --from=frontend-builder --chown=portal:portal /app/prepared/ /app/frontend/
+
+# Create startup script
+COPY --chown=portal:portal <<'EOF' /app/start.sh
+#!/bin/sh
+set -e
+
+echo "Starting MCP Portal..."
+
+# Check Docker socket access
+if [ -S /var/run/docker.sock ]; then
+    echo "Docker socket detected, checking permissions..."
+    # Try to add portal user to docker group if needed
+    if [ -w /var/run/docker.sock ]; then
+        echo "Docker socket is writable"
+    else
+        echo "Warning: Docker socket not writable. Container management may not work."
+    fi
+fi
+
+# Start backend in background
+echo "Starting backend API on port 8080..."
+/app/backend/docker-mcp portal serve --host 0.0.0.0 --port 8080 &
+BACKEND_PID=$!
+
+# Give backend time to start
+sleep 5
+
+# Check if backend started successfully
+if ! kill -0 $BACKEND_PID 2>/dev/null; then
+    echo "Backend failed to start"
+    exit 1
+fi
+
+# Start frontend
+echo "Starting frontend on port 3000..."
+cd /app/frontend
+
+# Check if standalone build exists
+if [ -f "server.js" ]; then
+    echo "Using standalone Next.js build..."
+    NODE_ENV=production PORT=3000 node server.js &
+else
+    echo "Using regular Next.js build..."
+    NODE_ENV=production npm start &
+fi
+FRONTEND_PID=$!
+
+# Function to handle shutdown
+shutdown() {
+    echo "Shutting down services..."
+    kill $BACKEND_PID $FRONTEND_PID 2>/dev/null || true
+    exit 0
+}
+
+# Trap signals for graceful shutdown
+trap shutdown SIGTERM SIGINT
+
+# Wait for either process to exit
+wait $BACKEND_PID $FRONTEND_PID
+
+# If we get here, something crashed
+echo "Portal services stopped unexpectedly"
+exit 1
+EOF
+
+RUN chmod +x /app/start.sh
+
+# Add healthcheck
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8080/api/health && \
+    curl -f http://localhost:3000/ || exit 1
+
+# Switch to non-root user
+USER portal
+
+# Expose ports
+EXPOSE 3000 8080
+
+# Environment variables
+ENV NODE_ENV=production \
+    MCP_PORTAL_HOST=0.0.0.0 \
+    MCP_PORTAL_PORT=8080 \
+    NEXT_PUBLIC_API_URL=http://localhost:8080 \
+    PORT=3000
+
+# Start services
+CMD ["/app/start.sh"]

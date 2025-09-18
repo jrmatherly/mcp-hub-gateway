@@ -1,0 +1,50 @@
+bin
+dist
+.idea/
+/.direnv/
+/.vscode/
+/.envrc
+.DS_Store
+**/.DS_Store
+/nix/
+.idx/
+.serena/
+cmd/docker-mcp/portal/frontend/node_modules/
+.env
+
+# Go test binaries
+*.test
+
+# Coverage files
+*.coverprofile
+coverage.html
+coverage.out
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+/temp/
+/tmp/
+
+# Portal/Next.js specific
+.next/
+out/
+.turbo/
+*.local
+
+# Go workspace
+go.work.sum
+
+# Debug files
+debug.test
+
+# Sitemap
+cmd/docker-mcp/portal/frontend/public/robots.txt
+cmd/docker-mcp/portal/frontend/public/sitemap-0.xml
+cmd/docker-mcp/portal/frontend/public/sitemap.xml
+# Never track any .env files in TEMP_DEL
+TEMP_DEL/**/.env*
+TEMP_DEL/.env*
+TEMP_DEL/
