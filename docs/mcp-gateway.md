@@ -1,6 +1,6 @@
 # Docker MCP Gateway
 
-Running MCP Servers in Docker Containers is robust and secure. 
+Running MCP Servers in Docker Containers is robust and secure.
 
 See [Why running MCP Servers in Container is more secure](security.md)
 
@@ -59,10 +59,10 @@ services:
 
 ### What does it do?
 
-+ Starts an MCP Gateway for other services to use. Think AI Agents.
-+ Work independently from Docker Desktop's MCP Toolkit. It can run anywhere there's a Docker engine.
-+ Defines the list of enabled servers from the gateway's command line, with `--server`
-+ Uses the online Docker MCP Catalog hosted on http://desktop.docker.com/mcp/catalog/v2/catalog.yaml.
+- Starts an MCP Gateway for other services to use. Think AI Agents.
+- Work independently from Docker Desktop's MCP Toolkit. It can run anywhere there's a Docker engine.
+- Defines the list of enabled servers from the gateway's command line, with `--server`
+- Uses the online Docker MCP Catalog hosted on http://desktop.docker.com/mcp/catalog/v2/catalog.yaml.
 
 ### How to run
 

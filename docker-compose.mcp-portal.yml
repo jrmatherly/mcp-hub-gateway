@@ -55,6 +55,10 @@ services:
       # Persistent data storage
       - portal-data:/app/data
       - portal-logs:/app/logs
+      # Catalog persistence for MCP servers
+      - mcp-catalog:/home/portal/.docker/mcp
+      # User-specific catalog customizations
+      - user-catalogs:/app/user-catalogs
     depends_on:
       postgres:
         condition: service_healthy
@@ -150,3 +154,7 @@ volumes:
     name: mcp-portal-data
   portal-logs:
     name: mcp-portal-logs
+  mcp-catalog:
+    name: mcp-portal-catalog
+  user-catalogs:
+    name: mcp-portal-user-catalogs

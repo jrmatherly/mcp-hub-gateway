@@ -2,10 +2,10 @@
 
 This example shows how to call the MCP Gateway from a python client:
 
-+ Doesn't rely on the MCP Toolkit UI. Can run anywhere, even if Docker Desktop is not available.
-+ Defines the list of enabled servers from the gateway's command line, with `--server`
-+ Uses the online Docker MCP Catalog hosted on http://desktop.docker.com/mcp/catalog/v2/catalog.yaml.
-+ Uses the latest http streaming transport.
+- Doesn't rely on the MCP Toolkit UI. Can run anywhere, even if Docker Desktop is not available.
+- Defines the list of enabled servers from the gateway's command line, with `--server`
+- Uses the online Docker MCP Catalog hosted on http://desktop.docker.com/mcp/catalog/v2/catalog.yaml.
+- Uses the latest http streaming transport.
 
 ## How to run
 
@@ -17,9 +17,9 @@ docker compose up --build
 
 There are three types of interceptors, `exec`, `docker` and `http`.
 Interceptors can run `before` a tool call or `after` a tool call`.
-Those which run run`before` have access to the full tool call request and
+Those which run run`before`have access to the full tool call request and
 can either let the call go through or bypass the call and return a custom response.
-Those which run run `after` have access to the tool call response.
+Those which run run`after` have access to the tool call response.
 
 ## `exec`
 

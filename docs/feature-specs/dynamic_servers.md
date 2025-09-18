@@ -25,10 +25,12 @@ When enabled, the gateway adds five internal management tools to the available t
 **Purpose**: Search for MCP servers in the current catalog by name or description.
 
 **Parameters**:
+
 - `query` (required): Search query to find servers by name or description (case-insensitive)
 - `limit` (optional): Maximum number of results to return (default: 10)
 
 **Example Usage**:
+
 ```json
 {
   "name": "mcp-find",
@@ -46,9 +48,11 @@ When enabled, the gateway adds five internal management tools to the available t
 **Purpose**: Add a new MCP server to the registry and reload the configuration.
 
 **Parameters**:
+
 - `name` (required): Name of the MCP server to add to the registry (must exist in catalog)
 
 **Example Usage**:
+
 ```json
 {
   "name": "mcp-add",
@@ -59,6 +63,7 @@ When enabled, the gateway adds five internal management tools to the available t
 ```
 
 **Behavior**:
+
 - Checks if the server exists in the catalog
 - Adds the server to the active server list (avoiding duplicates)
 - Fetches updated secrets for the new server
@@ -70,9 +75,11 @@ When enabled, the gateway adds five internal management tools to the available t
 **Purpose**: Remove an MCP server from the registry and reload the configuration.
 
 **Parameters**:
+
 - `name` (required): Name of the MCP server to remove from the registry
 
 **Example Usage**:
+
 ```json
 {
   "name": "mcp-remove",
@@ -83,6 +90,7 @@ When enabled, the gateway adds five internal management tools to the available t
 ```
 
 **Behavior**:
+
 - Removes the server from the active server list
 - Reloads the gateway configuration
 - Returns success message
@@ -92,9 +100,11 @@ When enabled, the gateway adds five internal management tools to the available t
 **Purpose**: Import MCP servers from an official registry URL.
 
 **Parameters**:
+
 - `url` (required): URL to fetch the official registry JSON from (must be HTTP/HTTPS)
 
 **Example Usage**:
+
 ```json
 {
   "name": "mcp-official-registry-import",
@@ -105,6 +115,7 @@ When enabled, the gateway adds five internal management tools to the available t
 ```
 
 **Behavior**:
+
 - Validates the URL format
 - Fetches server definitions via HTTP GET
 - Adds imported servers to the local catalog
@@ -112,7 +123,7 @@ When enabled, the gateway adds five internal management tools to the available t
 - Reloads the gateway configuration
 - Returns detailed summary of each imported server including:
   - Server name and description
-  - Docker image information  
+  - Docker image information
   - Required secrets with configuration warnings
   - Available configuration schemas
   - Long-lived server indicators
@@ -123,11 +134,13 @@ When enabled, the gateway adds five internal management tools to the available t
 **Purpose**: Set configuration values for MCP servers.
 
 **Parameters**:
+
 - `server` (required): Name of the MCP server to configure
 - `key` (required): Configuration key to set
 - `value` (required): Configuration value to set (can be string, number, boolean, or object)
 
 **Example Usage**:
+
 ```json
 {
   "name": "mcp-config-set",
@@ -140,6 +153,7 @@ When enabled, the gateway adds five internal management tools to the available t
 ```
 
 **Behavior**:
+
 - Creates or updates server configuration
 - Reloads the gateway configuration to apply changes
 - Returns success message with old/new values
@@ -157,6 +171,7 @@ When servers are added dynamically, the system automatically:
 ### Duplicate Prevention
 
 The `mcp-add` tool ensures server name uniqueness by:
+
 - Checking existing server names before adding
 - Only appending new servers if not already present
 - Maintaining the original order of servers
@@ -164,6 +179,7 @@ The `mcp-add` tool ensures server name uniqueness by:
 ### Configuration Reloading
 
 All management tools trigger configuration reloading via `reloadConfiguration()`:
+
 - Updates tool, prompt, and resource registrations
 - Refreshes capabilities with the MCP server
 - Applies new secrets and configurations
@@ -172,6 +188,7 @@ All management tools trigger configuration reloading via `reloadConfiguration()`
 ## Use Cases
 
 ### 1. Development Workflow
+
 ```
 AI: I need to work with files. Let me find filesystem tools.
 Tool: mcp-find -> query: "filesystem"
@@ -181,6 +198,7 @@ AI: Now I can use file operations.
 ```
 
 ### 2. Importing Official Servers
+
 ```
 AI: I want to use servers from the official registry.
 Tool: mcp-official-registry-import -> url: "https://registry.mcp.dev/servers.json"
@@ -188,6 +206,7 @@ AI: Successfully imported 12 servers. I can now use them.
 ```
 
 ### 3. Server Configuration
+
 ```
 AI: I need to configure the filesystem server with specific paths.
 Tool: mcp-config-set -> server: "filesystem", key: "allowed_paths", value: ["/workspace"]
@@ -204,6 +223,7 @@ AI: Configuration updated. The server now has restricted access.
 ## Logging
 
 The feature provides detailed logging for:
+
 - Server additions and removals
 - Configuration changes
 - Secret fetching operations
@@ -220,6 +240,7 @@ The feature provides detailed logging for:
 ## Future Enhancements
 
 Potential future improvements include:
+
 - Bulk server operations
 - Server dependency management
 - Configuration validation

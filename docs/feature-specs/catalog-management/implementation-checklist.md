@@ -7,9 +7,11 @@
 **Investigation Notes**: `/Users/masegraye/dev/docker/id-writing/scratch/mcp-gateway-investigation.md`
 
 ### 🎉 Implementation Summary
+
 All Phase 1 & 2 implementation work has been **completed and tested**:
+
 - ✅ **Feature Management System**: Full TDD implementation with 8 test cases
-- ✅ **Gateway Enhancement**: Complete flag integration with 5 test cases  
+- ✅ **Gateway Enhancement**: Complete flag integration with 5 test cases
 - ✅ **Catalog Loading**: Multi-catalog support with 6 test cases
 - ✅ **Export Command**: New functionality with 4 test cases
 - ✅ **Bootstrap Command**: New quick-start functionality with 4 test cases
@@ -43,6 +45,7 @@ make lint-darwin                           # Run linting (only when implementati
 **CRITICAL**: Follow this exact workflow with progressively broader scope:
 
 #### 1. Red Phase - Write Failing Tests First
+
 ```bash
 # Test just the specific package you're working on
 go test ./cmd/docker-mcp/commands    # Example: testing feature commands
@@ -50,6 +53,7 @@ go test ./cmd/docker-mcp/commands    # Example: testing feature commands
 ```
 
 #### 2. Green Phase - Make Tests Pass
+
 ```bash
 # Write minimal implementation to make tests pass
 go test ./cmd/docker-mcp/commands    # Test same package again
@@ -57,6 +61,7 @@ go test ./cmd/docker-mcp/commands    # Test same package again
 ```
 
 #### 3. Package Integration Test
+
 ```bash
 # Test all related packages together
 go test ./cmd/docker-mcp/...         # Test entire cmd tree
@@ -64,6 +69,7 @@ go test ./cmd/docker-mcp/...         # Test entire cmd tree
 ```
 
 #### 4. Full System Test
+
 ```bash
 # Test the entire system
 make test
@@ -71,6 +77,7 @@ make test
 ```
 
 #### 5. Build Phase - Verify Compilation
+
 ```bash
 # Only build after all tests pass
 make docker-mcp
@@ -78,6 +85,7 @@ make docker-mcp
 ```
 
 #### 6. Manual Verification
+
 ```bash
 # Test the actual CLI functionality
 ./dist/docker-mcp [your-new-command] --help
@@ -85,12 +93,14 @@ make docker-mcp
 ```
 
 #### 7. Refactor Phase (Optional)
+
 ```bash
 # Improve code while keeping tests green
 go test ./path/to/package    # Test specific package after changes
 ```
 
 #### 8. Lint Phase (End of Implementation Only)
+
 ```bash
 # Only run linting when feature is complete
 make lint-darwin
@@ -100,18 +110,21 @@ make lint-darwin
 ### Test Categories & Strategy
 
 #### Unit Tests (Primary Focus)
+
 - **Location**: Tests should be in `*_test.go` files alongside implementation
 - **Speed**: Fast (< 1 second per test file)
 - **Focus**: Individual function/method behavior
 - **Run Command**: `make test`
 
 #### Integration Tests (Secondary)
+
 - **Location**: `cmd/docker-mcp/integration_test.go` and similar
 - **Speed**: Slower (requires Docker daemon)
 - **Focus**: End-to-end command workflows
 - **Note**: Some are skipped in normal `make test` runs
 
 #### Manual Tests (Verification)
+
 - **Purpose**: Verify CLI behavior matches expectations
 - **When**: After successful build, before marking tasks complete
 - **Focus**: User experience and error messages
@@ -128,12 +141,14 @@ make lint-darwin
 ### Error Handling Strategy
 
 #### Test Failures
+
 ```bash
 make test
 # If tests fail, fix the code, don't skip tests
 ```
 
 #### Build Failures
+
 ```bash
 make docker-mcp
 # If build fails, check compilation errors and fix
@@ -141,6 +156,7 @@ make docker-mcp
 ```
 
 #### Lint Failures (End of Development)
+
 ```bash
 make lint-darwin
 # Fix all linting issues before marking feature complete
@@ -149,7 +165,8 @@ make lint-darwin
 ### Baseline Verification ✅
 
 The following baseline tests have been verified to work:
-- `make docker-mcp` - Builds successfully 
+
+- `make docker-mcp` - Builds successfully
 - `make test` - All existing tests pass
 - `make lint-darwin` - 0 linting issues
 - CLI functionality verified working
@@ -162,13 +179,13 @@ The following baseline tests have been verified to work:
 
 Each implementation section below specifies **TEST FIRST** requirements. These test files must be created with failing tests before writing implementation code:
 
-| Component | Test File | Purpose |
-|-----------|-----------|---------|
-| Feature Management | `cmd/docker-mcp/commands/feature_test.go` | Test feature enable/disable/list commands |
-| Gateway Enhancement | `cmd/docker-mcp/commands/gateway_test.go` | Test --use-configured-catalogs flag validation |
-| Catalog Loading | `cmd/docker-mcp/internal/catalog/catalog_test.go` | Test catalog precedence and loading logic |
-| Export Command | `cmd/docker-mcp/catalog/export_test.go` | Test export functionality and protection |
-| Command Visibility | `cmd/docker-mcp/catalog/*_test.go` | Test unhidden commands appear in help |
+| Component           | Test File                                         | Purpose                                        |
+| ------------------- | ------------------------------------------------- | ---------------------------------------------- |
+| Feature Management  | `cmd/docker-mcp/commands/feature_test.go`         | Test feature enable/disable/list commands      |
+| Gateway Enhancement | `cmd/docker-mcp/commands/gateway_test.go`         | Test --use-configured-catalogs flag validation |
+| Catalog Loading     | `cmd/docker-mcp/internal/catalog/catalog_test.go` | Test catalog precedence and loading logic      |
+| Export Command      | `cmd/docker-mcp/catalog/export_test.go`           | Test export functionality and protection       |
+| Command Visibility  | `cmd/docker-mcp/catalog/*_test.go`                | Test unhidden commands appear in help          |
 
 ### Test-First Workflow Reminder
 
@@ -176,7 +193,7 @@ Each implementation section below specifies **TEST FIRST** requirements. These t
 # 1. Write failing tests first
 go test ./cmd/docker-mcp/commands -v  # Should show failing tests
 
-# 2. Write minimal implementation  
+# 2. Write minimal implementation
 go test ./cmd/docker-mcp/commands -v  # Should show passing tests
 
 # 3. Test broader scope
@@ -192,16 +209,19 @@ make docker-mcp                      # Should build successfully
 ## Quick Context for Claude Code Sessions
 
 ### What This Feature Does
+
 Enable users to create and manage custom MCP server catalogs that automatically work with the gateway runtime, while maintaining backward compatibility with Docker Desktop through feature flag gating.
 
 ### Current Architecture Status
+
 - ✅ **Catalog CRUD System**: Fully implemented by David Gageot (June-July 2025)
-- ✅ **Multi-Catalog Gateway**: Implemented by Jim Clark (July 21, 2025) 
+- ✅ **Multi-Catalog Gateway**: Implemented by Jim Clark (July 21, 2025)
 - ✅ **Infrastructure**: All underlying systems exist and work
 - ❌ **Integration Gap**: Gateway runtime ignores catalog management system
 - ❌ **User Discovery**: Catalog management commands are hidden
 
 ### Implementation Strategy
+
 **Feature Flag Approach**: Use Docker CLI's existing `features` config system to gate new functionality, ensuring Docker Desktop compatibility.
 
 ## Implementation Checklist
@@ -211,11 +231,13 @@ Enable users to create and manage custom MCP server catalogs that automatically 
 #### 1.1 Feature Management System ✅ COMPLETED
 
 **🧪 TEST FIRST**: `cmd/docker-mcp/commands/feature_test.go` ✅ COMPLETED
+
 - [x] **Write tests for feature command structure**
+
   ```go
   // Test cases implemented:
   func TestFeatureEnableCommand(t *testing.T)     // ✅ Test enabling configured-catalogs
-  func TestFeatureDisableCommand(t *testing.T)    // ✅ Test disabling configured-catalogs  
+  func TestFeatureDisableCommand(t *testing.T)    // ✅ Test disabling configured-catalogs
   func TestFeatureListCommand(t *testing.T)       // ✅ Test listing all features and status
   func TestFeatureInvalidFeature(t *testing.T)    // ✅ Test error for unknown feature names
   ```
@@ -226,7 +248,9 @@ Enable users to create and manage custom MCP server catalogs that automatically 
   - [x] Target: `~/.docker/config.json` → `features.configured-catalogs`
 
 **🧪 TEST FIRST**: `cmd/docker-mcp/commands/feature_test.go` (validation utilities) ✅ COMPLETED
+
 - [x] **Write tests for feature validation utilities**
+
   ```go
   // Test cases implemented:
   func TestIsFeatureEnabledTrue(t *testing.T)       // ✅ Test when feature is enabled
@@ -236,6 +260,7 @@ Enable users to create and manage custom MCP server catalogs that automatically 
   ```
 
 - [x] **Feature validation utilities** ✅ COMPLETED
+
   - [x] Function: `isFeatureEnabled(dockerCli command.Cli, feature string) bool`
   - [x] Handle missing config file gracefully
   - [x] Support container mode detection
@@ -247,7 +272,9 @@ Enable users to create and manage custom MCP server catalogs that automatically 
 #### 1.2 Gateway Command Enhancement ✅ COMPLETED
 
 **🧪 TEST FIRST**: `cmd/docker-mcp/commands/gateway_test.go` ✅ COMPLETED
+
 - [x] **Write tests for gateway flag validation**
+
   ```go
   // Test cases implemented:
   func TestGatewayUseConfiguredCatalogsEnabled(t *testing.T)   // ✅ Test flag works when feature enabled
@@ -258,11 +285,13 @@ Enable users to create and manage custom MCP server catalogs that automatically 
   ```
 
 - [x] **Add --use-configured-catalogs flag** ✅ COMPLETED
+
   - [x] File: `cmd/docker-mcp/commands/gateway.go`
   - [x] Flag: `--use-configured-catalogs` (boolean)
   - [x] Validation: Check feature flag before allowing flag usage
 
 - [x] **Feature validation integration** ✅ COMPLETED
+
   - [x] PreRunE validation for feature flag requirement
   - [x] Clear error messages with exact enable command
   - [x] Container mode detection and helpful errors
@@ -274,7 +303,9 @@ Enable users to create and manage custom MCP server catalogs that automatically 
 #### 1.3 Catalog Loading Enhancement ✅ COMPLETED
 
 **🧪 TEST FIRST**: `cmd/docker-mcp/internal/catalog/catalog_test.go` ✅ COMPLETED
+
 - [x] **Write tests for catalog loading logic**
+
   ```go
   // Test cases implemented:
   func TestCatalogGetWithConfigured(t *testing.T)         // ✅ Test loading configured catalogs
@@ -285,12 +316,14 @@ Enable users to create and manage custom MCP server catalogs that automatically 
   func TestCatalogPrecedenceOrder(t *testing.T)           // ✅ Test Docker → Configured → CLI order
   ```
 
-- [x] **Update catalog.Get() signature** ✅ COMPLETED  
+- [x] **Update catalog.Get() signature** ✅ COMPLETED
+
   - [x] File: `cmd/docker-mcp/internal/catalog/catalog.go`
   - [x] New function: `GetWithOptions(ctx context.Context, useConfigured bool, additionalCatalogs []string) (Catalog, error)`
   - [x] Backward compatibility: Keep current `Get()` for existing callers
 
 - [x] **Implement getConfiguredCatalogs()** ✅ COMPLETED
+
   - [x] Read from `~/.docker/mcp/catalog.json`
   - [x] Return list of catalog file names
   - [x] Handle missing/corrupted catalog registry gracefully
@@ -303,7 +336,9 @@ Enable users to create and manage custom MCP server catalogs that automatically 
 #### 1.4 Enhanced Conflict Resolution & Logging ✅ COMPLETED
 
 **🧪 TEST FIRST**: `cmd/docker-mcp/internal/catalog/catalog_test.go` (conflict resolution) ✅ COMPLETED
+
 - [x] **Write tests for conflict resolution**
+
   ```go
   // Test cases implemented:
   func TestCatalogPrecedenceOrder(t *testing.T)     // ✅ Test server-level precedence (architecturally correct)
@@ -311,6 +346,7 @@ Enable users to create and manage custom MCP server catalogs that automatically 
   ```
 
 - [x] **Validate ReadFrom() logging** ✅ COMPLETED
+
   - [x] File: `cmd/docker-mcp/internal/catalog/catalog.go`
   - [x] Existing warning messages for server conflicts confirmed working
   - [x] Server-level precedence correctly implemented
@@ -323,7 +359,9 @@ Enable users to create and manage custom MCP server catalogs that automatically 
 #### 1.5 Export Command Implementation ✅ COMPLETED
 
 **🧪 TEST FIRST**: `cmd/docker-mcp/commands/export_test.go` ✅ COMPLETED
+
 - [x] **Write tests for export command**
+
   ```go
   // Test cases implemented:
   func TestExportCatalogCommand(t *testing.T)           // ✅ Test successful export
@@ -333,11 +371,13 @@ Enable users to create and manage custom MCP server catalogs that automatically 
   ```
 
 - [x] **Create export command** ✅ COMPLETED
+
   - [x] File: `cmd/docker-mcp/catalog/export.go` (new)
   - [x] Command: `export <catalog-name> <file-path>`
   - [x] Protection: Prevent export of `docker-mcp` official catalog
 
 - [x] **Export functionality** ✅ COMPLETED
+
   - [x] Read catalog from `~/.docker/mcp/catalogs/{name}.yaml`
   - [x] Validate catalog exists and is user-managed
   - [x] Support for custom output file path
@@ -350,7 +390,9 @@ Enable users to create and manage custom MCP server catalogs that automatically 
 #### 1.6 Command Visibility Updates ✅ COMPLETED
 
 **🧪 TEST FIRST**: Command visibility validated through CLI help output ✅ COMPLETED
+
 - [x] **Manual validation of command visibility**
+
   ```bash
   # All commands now visible in docker mcp catalog --help:
   # ✅ add         Add a server to your catalog
@@ -362,7 +404,8 @@ Enable users to create and manage custom MCP server catalogs that automatically 
   ```
 
 - [x] **Unhide catalog CRUD commands** ✅ COMPLETED
-  - [x] Files: `cmd/docker-mcp/commands/catalog.go`  
+
+  - [x] Files: `cmd/docker-mcp/commands/catalog.go`
   - [x] Removed `Hidden: true` from all command definitions
   - [x] All catalog management commands now user-visible
 
@@ -375,16 +418,19 @@ Enable users to create and manage custom MCP server catalogs that automatically 
 #### 2.1 Unit Tests ✅ COMPLETED
 
 - [x] **Feature flag validation tests** ✅ COMPLETED
+
   - [x] Test enabled/disabled/missing scenarios (4 test cases)
   - [x] Test Docker CLI integration
   - [x] Test container mode behavior
 
-- [x] **Catalog loading tests** ✅ COMPLETED  
+- [x] **Catalog loading tests** ✅ COMPLETED
+
   - [x] Test precedence order with multiple catalogs (6 test cases)
   - [x] Test conflict resolution logging with warning messages
   - [x] Test graceful failure handling for missing/corrupt registry
 
 - [x] **Export command tests** ✅ COMPLETED
+
   - [x] Test successful export of user catalogs
   - [x] Test prevention of Docker catalog export
   - [x] Test catalog not found scenarios
@@ -398,11 +444,13 @@ Enable users to create and manage custom MCP server catalogs that automatically 
 #### 2.2 Integration Tests ✅ COMPLETED
 
 - [x] **End-to-end workflow tests** ✅ COMPLETED
+
   - [x] All test suites pass in container environment
   - [x] Binary builds and installs successfully as Docker CLI plugin
   - [x] All commands visible and functional in CLI help
 
 - [x] **Docker Desktop compatibility tests** ✅ COMPLETED
+
   - [x] Verified `docker mcp gateway run` behavior unchanged (backward compatibility)
   - [x] Verified existing catalog commands work as expected
   - [x] No regression in Docker Desktop workflow
@@ -415,6 +463,7 @@ Enable users to create and manage custom MCP server catalogs that automatically 
 #### 2.3 Manual Testing Scenarios ✅ COMPLETED
 
 - [x] **Development workflow testing** ✅ COMPLETED
+
   - [x] Feature enable/disable cycle verified working
   - [x] All catalog commands now visible in `docker mcp catalog --help`
   - [x] Export command protection working correctly
@@ -434,6 +483,7 @@ Enable users to create and manage custom MCP server catalogs that automatically 
 **Purpose**: Create a starter catalog file with Docker and Docker Hub server entries as examples, making it easy for users to understand the catalog format and get started with custom catalogs.
 
 **🧪 TEST FIRST**: `cmd/docker-mcp/commands/bootstrap_test.go` ✅ COMPLETED
+
 - [x] **Write tests for bootstrap command**
   ```go
   // Test cases implemented:
@@ -444,14 +494,16 @@ Enable users to create and manage custom MCP server catalogs that automatically 
   ```
 
 **Implementation Strategy**:
+
 1. **Config loading**: Call `ReadConfigWithDefaultCatalog(ctx)` to load Docker catalog
-2. **YAML reading**: Call `ReadCatalogFile("docker-mcp")` to get raw catalog YAML  
+2. **YAML reading**: Call `ReadCatalogFile("docker-mcp")` to get raw catalog YAML
 3. **Struct parsing**: Unmarshal to `Registry` struct for Go data access
 4. **Server extraction**: Extract `registry.Registry["dockerhub"]` and `registry.Registry["docker"]`
-5. **Bootstrap generation**: Create new `Registry` with only extracted servers  
+5. **Bootstrap generation**: Create new `Registry` with only extracted servers
 6. **File creation**: Marshal to YAML and write standalone catalog file
 
 **Expected User Workflow**:
+
 ```bash
 # Create bootstrap catalog with Docker examples
 docker mcp catalog bootstrap ./my-custom-catalog.yaml
@@ -465,18 +517,22 @@ docker mcp catalog add existing-catalog my-server ./my-custom-catalog.yaml
 ```
 
 **Implementation Tasks**: ✅ ALL COMPLETED
+
 - [x] **Create bootstrap command** ✅ COMPLETED
+
   - [x] File: `cmd/docker-mcp/commands/bootstrap.go` (new)
   - [x] Command: `bootstrap <output-file-path>`
   - [x] Internal calls to `ReadConfigWithDefaultCatalog()` and `ReadCatalogFile()`
 
-- [x] **Bootstrap functionality** ✅ COMPLETED  
+- [x] **Bootstrap functionality** ✅ COMPLETED
+
   - [x] File: `cmd/docker-mcp/catalog/bootstrap.go` (new)
   - [x] Extract Docker and DockerHub entries from live catalog using YAML parsing
   - [x] Generate properly formatted YAML catalog structure with extracted servers
   - [x] File overwrite protection with clear error messages
 
 - [x] **Error handling** ✅ COMPLETED
+
   - [x] Validate output path is writable with directory creation
   - [x] Handle Docker catalog access failures gracefully
   - [x] Clear error messages for file conflicts and missing servers
@@ -487,6 +543,7 @@ docker mcp catalog add existing-catalog my-server ./my-custom-catalog.yaml
   - [x] Full CLI integration and visibility
 
 **End-to-End Validation**: ✅ COMPLETED
+
 - [x] **Bootstrap file creation**: Successfully creates YAML with Docker and DockerHub servers
 - [x] **Catalog add integration**: Bootstrap file works as source for `catalog add` command
 - [x] **Server extraction**: Individual servers can be copied from bootstrap file to catalogs
@@ -498,6 +555,7 @@ docker mcp catalog add existing-catalog my-server ./my-custom-catalog.yaml
 #### 3.1 Documentation Updates
 
 - [ ] **CLI reference updates**
+
   - [ ] Update generated docs for newly visible commands
   - [ ] Document feature flag requirement
   - [ ] Document new bootstrap command workflow
@@ -511,8 +569,9 @@ docker mcp catalog add existing-catalog my-server ./my-custom-catalog.yaml
 #### 3.2 Error Handling Polish
 
 - [ ] **Comprehensive error messages**
+
   - [ ] Feature not enabled → exact enable command
-  - [ ] Container mode → volume mount instructions  
+  - [ ] Container mode → volume mount instructions
   - [ ] Catalog loading failures → helpful diagnostics
 
 - [ ] **Logging improvements**
@@ -523,18 +582,21 @@ docker mcp catalog add existing-catalog my-server ./my-custom-catalog.yaml
 ### Phase 4: Advanced Features (Future)
 
 #### 4.1 Performance Optimizations
+
 - [ ] **Catalog caching**
   - [ ] Cache loaded catalogs between gateway runs
   - [ ] Invalidate cache on catalog updates
   - [ ] Performance benchmarking
 
 #### 4.2 Enhanced Validation
+
 - [ ] **Catalog URL validation**
   - [ ] HTTPS requirement for remote catalogs
   - [ ] URL safety validation
   - [ ] Optional signature verification
 
 #### 4.3 Docker Desktop Integration
+
 - [ ] **UI for catalog management**
   - [ ] List configured catalogs in Docker Desktop
   - [ ] Enable/disable specific catalogs
@@ -543,8 +605,9 @@ docker mcp catalog add existing-catalog my-server ./my-custom-catalog.yaml
 ## Progress Tracking
 
 ### Completed Analysis Work ✅
+
 - [x] **Architecture Investigation**: Complete understanding of existing systems
-- [x] **Git Blame Analysis**: Identified key contributors and implementation timeline  
+- [x] **Git Blame Analysis**: Identified key contributors and implementation timeline
 - [x] **Docker Desktop Integration**: Understood compatibility requirements
 - [x] **Binary Distribution Analysis**: Confirmed feature flag system works across all modes
 - [x] **Feature Flag Research**: Identified Docker CLI `features` system as perfect solution
@@ -553,6 +616,7 @@ docker mcp catalog add existing-catalog my-server ./my-custom-catalog.yaml
 - [x] **Risk Assessment**: Identified and mitigated major risks
 
 ### Current Status
+
 **✅ PHASE 1 & 2 IMPLEMENTATION COMPLETE - PRODUCTION READY**
 
 All Phase 1 & 2 implementation, testing, and validation work is **complete**. The feature is ready for production use with:
@@ -561,28 +625,32 @@ All Phase 1 & 2 implementation, testing, and validation work is **complete**. Th
 - **Full TDD implementation** with test-first development methodology
 - **Container environment validation** - all tests pass in `make test`
 - **End-to-End workflow validation** - complete bootstrap → add → export tested
-- **Backward compatibility** - no changes to existing Docker Desktop workflows  
+- **Backward compatibility** - no changes to existing Docker Desktop workflows
 - **Production-ready binary** - builds and installs successfully as Docker CLI plugin
 
-**Key Achievements**: 
+**Key Achievements**:
+
 - Users can now enable `configured-catalogs` feature and use custom catalogs alongside Docker's official catalog with full CLI management capabilities
 - New users can quickly get started with the `bootstrap` command to understand catalog format and create starter files with real Docker server examples
 
 ## Key Implementation Notes
 
 ### Critical Success Factors
+
 1. **Maintain Docker Desktop Compatibility**: Never change default behavior of `docker mcp gateway run`
 2. **Feature Flag Gating**: All new functionality MUST be gated behind `configured-catalogs` feature
 3. **Graceful Degradation**: System must work properly when config is inaccessible
 4. **Clear User Communication**: Error messages must provide exact commands to fix issues
 
-### Technical Constraints  
+### Technical Constraints
+
 1. **Backward Compatibility**: All existing command signatures and behaviors preserved
 2. **Container Support**: Feature must work in container mode with proper volume mounts
 3. **Performance**: Catalog loading must not significantly impact gateway startup time
 4. **Security**: No privilege escalation or unsafe file operations
 
 ### Architecture Decisions Made
+
 1. **Feature Flag System**: Use Docker CLI's existing `features` config approach
 2. **Catalog Precedence**: Last-loaded-wins for server conflicts (Docker → Configured → CLI)
 3. **Command Structure**: Add `--use-configured-catalogs` flag rather than change defaults
@@ -591,29 +659,34 @@ All Phase 1 & 2 implementation, testing, and validation work is **complete**. Th
 ## File Locations Reference
 
 ### Implementation Target Files
+
 - **Feature Commands**: `cmd/docker-mcp/commands/feature.go` (new)
 - **Export Command**: `cmd/docker-mcp/catalog/export.go` (new)
-- **Gateway Enhancement**: `cmd/docker-mcp/commands/gateway.go` 
+- **Gateway Enhancement**: `cmd/docker-mcp/commands/gateway.go`
 - **Catalog Loading**: `cmd/docker-mcp/catalog/catalog.go`
 - **Command Visibility**: `cmd/docker-mcp/catalog/{import,export,create,add,fork,rm}.go`
 
-### Key Reference Files  
+### Key Reference Files
+
 - **Command Structure**: `cmd/docker-mcp/commands/root.go`
 - **Docker CLI Integration**: `cmd/docker-mcp/main.go:33-35`
 - **Config Pattern**: `cli/cli/config/configfile/file.go:120` (Features map)
 - **Storage Pattern**: `cmd/docker-mcp/internal/config/readwrite.go`
 
 ### Investigation Documentation
+
 - **Detailed Investigation**: `/Users/masegraye/dev/docker/id-writing/scratch/mcp-gateway-investigation.md`
 - **Feature Specification**: `docs/feature-specs/catalog-management/feature-spec.md`
 
 ## Contact Information
 
 **Primary Technical Contact**: Jim Clark (@slimslenderslacks)
+
 - Implemented multi-catalog gateway support (July 21, 2025)
 - Best person to consult for architecture questions
 
-**Secondary Contact**: David Gageot  
+**Secondary Contact**: David Gageot
+
 - Implemented catalog management system (June-July 2025)
 - Expert on catalog CRUD operations and storage patterns
 
@@ -624,14 +697,15 @@ All Phase 1 & 2 implementation, testing, and validation work is **complete**. Th
 1. **Read the feature spec**: Start with `feature-spec.md` for complete context
 2. **Check current status**: Review completed items in this checklist
 3. **Start implementation**: Begin with Phase 1.1 (Feature Management System)
-4. **Test thoroughly**: Each component must work in plugin, standalone, and container modes  
+4. **Test thoroughly**: Each component must work in plugin, standalone, and container modes
 5. **Maintain compatibility**: Docker Desktop behavior must never change
 
 **Key Commands to Validate Success**:
+
 ```bash
 # Phase 1: Configured catalogs workflow
 docker mcp feature enable configured-catalogs
-docker mcp catalog create my-servers  
+docker mcp catalog create my-servers
 docker mcp catalog add my-servers test-server ./server.yaml
 docker mcp catalog export my-servers ./backup.yaml
 docker mcp gateway run --use-configured-catalogs

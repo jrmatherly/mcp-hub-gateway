@@ -4,10 +4,10 @@ This is a simple example of running the MCP Gateway that proxies to other remote
 
 ## With Docker Compose
 
-+ Doesn't rely on the MCP Toolkit UI or the Docker socket. Can run anywhere, even if Docker Desktop is not available.
-+ Defines the list of enabled servers from the gateway's command line, with `--server`.
-+ Uses a custom catalog that lists a single remote MCP server.
-+ Uses SSE for the transport and can be connected to via `http://localhost:8811/sse`.
+- Doesn't rely on the MCP Toolkit UI or the Docker socket. Can run anywhere, even if Docker Desktop is not available.
+- Defines the list of enabled servers from the gateway's command line, with `--server`.
+- Uses a custom catalog that lists a single remote MCP server.
+- Uses SSE for the transport and can be connected to via `http://localhost:8811/sse`.
 
 ```console
 docker compose up

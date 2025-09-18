@@ -1,8 +1,7 @@
 # Run the MCP Gateway in a container
 
 The MCP Gateway can run in a container and still mount the MCP Toolkit's configuration.
-The following command runs an always on Gateway on your machine. It'll even start
-automatically on Docker's reboot.
+The following command runs an always on Gateway on your machine. It'll even start automatically on Docker's reboot.
 
 ## How to run
 

@@ -60,12 +60,15 @@ sequenceDiagram
 ### Questions
 
 ## Docker MCP OAuth Model
+
 Key points:
+
 - We implement the OAuth flows, nobody else has to.
 - Via a developer portal, 3rd parties can add OAuth clients (config with client_id, client_secret, redirect_uri).
 - We provide a secure and easy way to store and access secrets.
 
 ### Pre-authorization (`docker mcp auth notion my-server`)
+
 ```mermaid
 sequenceDiagram
     participant A as Authorisation Server
@@ -97,7 +100,9 @@ sequenceDiagram
 ```
 
 ### Handling 401 Unauthorized
+
 Note: Option 2 is the most elegant and safest solution. Neither the MCP server nor the MCP client need to know about all the details of the OAuth flow.
+
 ```mermaid
 sequenceDiagram
     participant C as MCP Client
@@ -132,10 +137,12 @@ sequenceDiagram
 ```
 
 ### Notes and observations
+
 Docker has some advantages:
+
 - We are already running in the background all the time.
 - This allows us to handle secret storage and management seamlessly in the background on the user's machine instead of on our infrastructure.
-- We don't need to be an OAuth server to register dynamic clients. 
+- We don't need to be an OAuth server to register dynamic clients.
   The client can use the credentials stored by DD, since we are in a trusted environment (on the user's machine).
   We just need to be a good proxy.
 - Usually clients have the problem of not being trusted.
@@ -178,9 +185,11 @@ sequenceDiagram
 ```
 
 Questions:
+
 - Alano: The diagram implies that the MCP server runs remotely. Is that correct? Because why otherwise would you need the MCP client to be authorized?
 
 #### All details included
+
 ```mermaid
 sequenceDiagram
     participant B as User-Agent (Browser)

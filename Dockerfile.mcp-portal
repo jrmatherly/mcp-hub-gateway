@@ -95,6 +95,12 @@ WORKDIR /app
 # Copy backend binary (destination is a file, not a directory)
 COPY --from=backend-builder --chown=portal:portal /build/docker-mcp /app/backend/docker-mcp
 
+# Install CLI plugin for catalog operations
+RUN mkdir -p /home/portal/.docker/cli-plugins && \
+    cp /app/backend/docker-mcp /home/portal/.docker/cli-plugins/docker-mcp && \
+    chmod +x /home/portal/.docker/cli-plugins/docker-mcp && \
+    chown -R portal:portal /home/portal
+
 # Copy all prepared frontend files in one go
 COPY --from=frontend-builder --chown=portal:portal /app/prepared/ /app/frontend/
 
@@ -180,7 +186,9 @@ ENV NODE_ENV=production \
     MCP_PORTAL_HOST=0.0.0.0 \
     MCP_PORTAL_PORT=8080 \
     NEXT_PUBLIC_API_URL=http://localhost:8080 \
-    PORT=3000
+    PORT=3000 \
+    HOME=/home/portal \
+    MCP_PORTAL_CATALOG_FEATURE_ENABLED=true
 
 # Start services
 CMD ["/app/start.sh"]

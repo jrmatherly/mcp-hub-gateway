@@ -1,5 +1,7 @@
 ## Message Flow
+
 Src: [official docs page](https://spec.modelcontextprotocol.io/specification/2025-03-26/server/tools/#message-flow)
+
 ```mermaid
 sequenceDiagram
     participant LLM

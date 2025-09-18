@@ -14,6 +14,7 @@ docker mcp catalog bootstrap ./my-starter-catalog.yaml
 ```
 
 This creates a YAML file with real server definitions that you can:
+
 - Modify to understand the catalog format
 - Use as a foundation for your custom servers
 - Import directly into your catalog collection
@@ -151,7 +152,7 @@ registry:
   server-name:
     description: "Description of what this server does"
     title: "Server Display Name"
-    type: "server"  # or "poci" for container tools
+    type: "server" # or "poci" for container tools
     image: "namespace/image:tag"
     tools:
       - name: "tool1"
@@ -169,35 +170,35 @@ registry:
     type: "server"
     dateAdded: "2025-08-01T00:00:00Z"
     image: "myorg/db-server:latest"
-    
+
     # Tools provided by this server
     tools:
       - name: "query_database"
       - name: "create_table"
       - name: "backup_data"
-    
+
     # Required secrets
     secrets:
       - name: "my-custom-server.api_key"
         env: "DB_API_KEY"
         example: "your-api-key-here"
-    
+
     # Environment variables
     env:
       - name: "DB_HOST"
         value: "{{my-custom-server.host}}"
       - name: "DB_PORT"
         value: "{{my-custom-server.port}}"
-    
+
     # Command line arguments
     command:
       - "--transport=stdio"
       - "--config={{my-custom-server.config_path}}"
-    
+
     # Volume mounts
     volumes:
       - "{{my-custom-server.data_path}}:/data"
-    
+
     # Configuration schema
     config:
       - name: "my-custom-server"
@@ -213,14 +214,14 @@ registry:
           data_path:
             type: "string"
         required: ["host", "port"]
-    
+
     # Metadata
     metadata:
       category: "database"
       tags: ["database", "sql", "backup"]
       license: "MIT License"
       owner: "myorg"
-    
+
     # Documentation links
     readme: "https://github.com/myorg/db-server/README.md"
     source: "https://github.com/myorg/db-server"
@@ -366,28 +367,37 @@ This process makes your servers available to all Docker MCP users through the of
 ## Troubleshooting
 
 ### Feature Not Enabled
+
 ```bash
 Error: configured catalogs feature is not enabled
 ```
+
 **Solution**: Run `docker mcp feature enable configured-catalogs`
 
 ### File Already Exists
+
 ```bash
 Error: file "catalog.yaml" already exists - will not overwrite
 ```
+
 **Solution**: Choose a different filename or move/remove the existing file
 
 ### Server Not Found
+
 ```bash
 Error: server "server-name" not found in catalog "source.yaml"
 ```
+
 **Solution**: Check the server name spelling and verify it exists in the source catalog
 
 ### Cannot Export Docker Catalog
+
 ```bash
 Error: cannot export the Docker MCP catalog as it is managed by Docker
 ```
+
 **Solution**: This is intentional - Docker's catalog cannot be exported. Use `bootstrap` to get Docker server examples instead.
 
 ### Container Mode Issues
+
 If running in container mode, ensure proper volume mounts for accessing catalog files and Docker configuration.
