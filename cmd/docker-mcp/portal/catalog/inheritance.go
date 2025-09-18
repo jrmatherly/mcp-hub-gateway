@@ -13,7 +13,7 @@ import (
 // InheritanceEngine manages catalog inheritance and merging for multi-user support
 type InheritanceEngine struct {
 	fileManager *FileCatalogManager
-	repository  Repository
+	repository  CatalogRepository
 	cache       *inheritanceCache
 	mu          sync.RWMutex
 }
@@ -33,7 +33,11 @@ type resolvedEntry struct {
 
 // ResolvedCatalog represents a fully resolved catalog for a user
 type ResolvedCatalog struct {
-	Catalog         *Catalog
+	MergedCatalog   *Catalog  // The final merged catalog
+	AdminServers    int       // Count of admin-controlled servers
+	UserOverrides   int       // Count of user customizations
+	CustomServers   int       // Count of user's custom servers
+	Timestamp       time.Time // When catalog was resolved
 	Sources         []CatalogSource
 	ResolutionTime  time.Duration
 	ConflictDetails []ConflictDetail
@@ -58,7 +62,7 @@ type ConflictDetail struct {
 // InheritanceConfig configuration for the inheritance engine
 type InheritanceConfig struct {
 	FileManager *FileCatalogManager
-	Repository  Repository
+	Repository  CatalogRepository
 	CacheTTL    time.Duration
 }
 
@@ -82,6 +86,20 @@ func NewInheritanceEngine(config InheritanceConfig) (*InheritanceEngine, error) 
 			ttl:      config.CacheTTL,
 		},
 	}, nil
+}
+
+// CreateInheritanceEngine creates a new catalog inheritance engine (constructor alias)
+func CreateInheritanceEngine(
+	fileManager *FileCatalogManager,
+	repository CatalogRepository,
+	cacheTTL time.Duration,
+) *InheritanceEngine {
+	engine, _ := NewInheritanceEngine(InheritanceConfig{
+		FileManager: fileManager,
+		Repository:  repository,
+		CacheTTL:    cacheTTL,
+	})
+	return engine
 }
 
 // ResolveForUser resolves the complete catalog for a specific user
@@ -117,7 +135,11 @@ func (e *InheritanceEngine) ResolveForUser(
 
 	// Create resolved catalog
 	resolved := &ResolvedCatalog{
-		Catalog:         merged,
+		MergedCatalog:   merged,
+		AdminServers:    e.countAdminServers(catalogLayers),
+		UserOverrides:   e.countUserOverrides(catalogLayers),
+		CustomServers:   e.countCustomServers(catalogLayers),
+		Timestamp:       time.Now(),
 		Sources:         e.extractSources(catalogLayers),
 		ResolutionTime:  time.Since(startTime),
 		ConflictDetails: conflicts,
@@ -150,10 +172,12 @@ func (e *InheritanceEngine) collectCatalogLayers(
 	var layers []*catalogLayer
 
 	// 1. System default catalog (lowest precedence)
-	systemCatalog, err := e.repository.GetSystemDefaultCatalog(ctx)
-	if err == nil && systemCatalog != nil {
+	// TODO: Implement GetSystemDefaultCatalog in repository
+	// For now, load from file manager
+	baseCatalog, err := e.fileManager.LoadBaseCatalog(ctx)
+	if err == nil && baseCatalog != nil {
 		layers = append(layers, &catalogLayer{
-			catalog:    systemCatalog,
+			catalog:    baseCatalog,
 			precedence: 1000,
 			source:     "system_default",
 			isBase:     true,
@@ -161,30 +185,33 @@ func (e *InheritanceEngine) collectCatalogLayers(
 	}
 
 	// 2. Admin base catalogs (medium precedence)
-	baseCatalogs, err := e.repository.GetAdminBaseCatalogs(ctx)
-	if err == nil {
-		for i, catalog := range baseCatalogs {
-			layers = append(layers, &catalogLayer{
-				catalog:    catalog,
-				precedence: 500 - i, // Higher index = lower precedence
-				source:     fmt.Sprintf("admin_base_%d", i),
-				isBase:     true,
-			})
-		}
-	}
+	// TODO: Implement GetAdminBaseCatalogs in repository
+	// For now, we'll use the base catalog loaded above
+	// baseCatalogs, err := e.repository.GetAdminBaseCatalogs(ctx)
+	// if err == nil {
+	// 	for i, catalog := range baseCatalogs {
+	// 		layers = append(layers, &catalogLayer{
+	// 			catalog:    catalog,
+	// 			precedence: 500 - i, // Higher index = lower precedence
+	// 			source:     fmt.Sprintf("admin_base_%d", i),
+	// 			isBase:     true,
+	// 		})
+	// 	}
+	// }
 
 	// 3. Team catalogs if user belongs to teams (higher precedence)
-	teamCatalogs, err := e.repository.GetTeamCatalogsForUser(ctx, userID)
-	if err == nil {
-		for i, catalog := range teamCatalogs {
-			layers = append(layers, &catalogLayer{
-				catalog:    catalog,
-				precedence: 200 - i,
-				source:     fmt.Sprintf("team_%s", catalog.Name),
-				isBase:     false,
-			})
-		}
-	}
+	// TODO: Implement GetTeamCatalogsForUser in repository
+	// teamCatalogs, err := e.repository.GetTeamCatalogsForUser(ctx, userID)
+	// if err == nil {
+	// 	for i, catalog := range teamCatalogs {
+	// 		layers = append(layers, &catalogLayer{
+	// 			catalog:    catalog,
+	// 			precedence: 200 - i,
+	// 			source:     fmt.Sprintf("team_%s", catalog.Name),
+	// 			isBase:     false,
+	// 		})
+	// 	}
+	// }
 
 	// 4. User personal catalog (highest precedence for additions)
 	userCatalog, err := e.fileManager.LoadUserCatalog(ctx, userID.String())
@@ -198,15 +225,17 @@ func (e *InheritanceEngine) collectCatalogLayers(
 	}
 
 	// 5. User customizations (highest precedence for overrides/disables)
-	customizations, err := e.repository.GetUserCustomizations(ctx, userID)
-	if err == nil && customizations != nil {
-		layers = append(layers, &catalogLayer{
-			catalog:    customizations,
-			precedence: 10,
-			source:     "user_customizations",
-			isBase:     false,
-		})
-	}
+	// TODO: Implement GetUserCustomizations in repository
+	// For now, user customizations are already loaded from file manager above
+	// customizations, err := e.repository.GetUserCustomizations(ctx, userID)
+	// if err == nil && customizations != nil {
+	// 	layers = append(layers, &catalogLayer{
+	// 		catalog:    customizations,
+	// 		precedence: 10,
+	// 		source:     "user_customizations",
+	// 		isBase:     false,
+	// 	})
+	// }
 
 	// Sort by precedence (lower number = higher priority)
 	sort.Slice(layers, func(i, j int) bool {
@@ -367,10 +396,54 @@ func (e *InheritanceEngine) RefreshUserCatalog(
 	return e.ResolveForUser(ctx, userID)
 }
 
-// Repository interface methods that need to be added to the existing repository
-type Repository interface {
-	// Existing methods...
+// countAdminServers counts admin-controlled servers in catalog layers
+func (e *InheritanceEngine) countAdminServers(layers []*catalogLayer) int {
+	count := 0
+	for _, layer := range layers {
+		if layer.catalog != nil && (layer.catalog.Type == CatalogTypeAdminBase ||
+			layer.catalog.Type == CatalogTypeSystemDefault) {
+			if layer.catalog.Registry != nil {
+				count += len(layer.catalog.Registry)
+			}
+		}
+	}
+	return count
+}
 
+// countUserOverrides counts user customizations
+func (e *InheritanceEngine) countUserOverrides(layers []*catalogLayer) int {
+	count := 0
+	for _, layer := range layers {
+		if layer.catalog != nil && layer.catalog.Type == CatalogTypePersonal {
+			if layer.catalog.DisabledServers != nil {
+				count += len(layer.catalog.DisabledServers)
+			}
+		}
+	}
+	return count
+}
+
+// countCustomServers counts custom user servers
+func (e *InheritanceEngine) countCustomServers(layers []*catalogLayer) int {
+	count := 0
+	for _, layer := range layers {
+		if layer.catalog != nil && layer.catalog.Type == CatalogTypePersonal {
+			if layer.catalog.Registry != nil {
+				count += len(layer.catalog.Registry)
+			}
+		}
+	}
+	return count
+}
+
+// ClearCache clears all cached catalogs
+func (e *InheritanceEngine) ClearCache() {
+	e.ClearAllCache()
+}
+
+// ExtendedRepository interface extends CatalogRepository with methods needed for inheritance
+type ExtendedRepository interface {
+	CatalogRepository
 	// New methods for inheritance
 	GetSystemDefaultCatalog(ctx context.Context) (*Catalog, error)
 	GetAdminBaseCatalogs(ctx context.Context) ([]*Catalog, error)

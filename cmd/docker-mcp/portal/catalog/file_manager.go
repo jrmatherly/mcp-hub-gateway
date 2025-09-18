@@ -85,6 +85,20 @@ func NewFileCatalogManager(config FileCatalogConfig) (*FileCatalogManager, error
 	}, nil
 }
 
+// CreateFileCatalogManager creates a new file-based catalog manager (constructor alias)
+func CreateFileCatalogManager(
+	basePath, userPath string,
+	encryptor EncryptionService,
+	cacheTTL time.Duration,
+) (*FileCatalogManager, error) {
+	return NewFileCatalogManager(FileCatalogConfig{
+		BasePath:  basePath,
+		UserPath:  userPath,
+		CacheTTL:  cacheTTL,
+		Encryptor: encryptor,
+	})
+}
+
 // LoadBaseCatalog loads all admin-controlled base catalogs
 func (m *FileCatalogManager) LoadBaseCatalog(ctx context.Context) (*Catalog, error) {
 	m.mu.RLock()
@@ -391,6 +405,55 @@ func (m *FileCatalogManager) ExportCatalog(
 	default:
 		return nil, fmt.Errorf("unsupported format: %s", format)
 	}
+}
+
+// SaveBaseCatalog saves a base catalog to the file system
+func (m *FileCatalogManager) SaveBaseCatalog(ctx context.Context, catalog *Catalog) error {
+	if catalog == nil {
+		return fmt.Errorf("catalog is nil")
+	}
+
+	// Marshal to YAML
+	data, err := yaml.Marshal(catalog)
+	if err != nil {
+		return fmt.Errorf("failed to marshal catalog: %w", err)
+	}
+
+	// Create file path
+	filename := fmt.Sprintf("%s.yaml", catalog.Name)
+	path := filepath.Join(m.basePath, filename)
+
+	// Write atomically
+	tempPath := path + ".tmp"
+	if err := os.WriteFile(tempPath, data, 0o644); err != nil {
+		return fmt.Errorf("failed to write catalog file: %w", err)
+	}
+
+	// Rename to final path
+	if err := os.Rename(tempPath, path); err != nil {
+		os.Remove(tempPath)
+		return fmt.Errorf("failed to save catalog: %w", err)
+	}
+
+	// Clear cache
+	m.mu.Lock()
+	delete(m.cache, "base:all")
+	m.mu.Unlock()
+
+	// Audit log
+	if m.auditLogger != nil {
+		m.auditLogger.LogCatalogOperation(
+			ctx,
+			"system",
+			"save_base_catalog",
+			map[string]interface{}{
+				"catalog_name": catalog.Name,
+				"path":         path,
+			},
+		)
+	}
+
+	return nil
 }
 
 // Helper methods
