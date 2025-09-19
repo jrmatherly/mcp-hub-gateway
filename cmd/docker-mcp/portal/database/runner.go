@@ -337,6 +337,7 @@ func RunMigrationsSimple() error {
 
 	// Use default options for test scenarios
 	options := RunOptions{
+		Direction:  DirectionUp, // Add missing Direction field
 		SchemaName: "public",
 		TableName:  "schema_migrations",
 		MaxRetries: 3,

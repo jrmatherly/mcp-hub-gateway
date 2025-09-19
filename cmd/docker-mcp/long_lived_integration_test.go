@@ -55,9 +55,6 @@ func newTestGatewayClient(t *testing.T, args []string) mcpclient.Client {
 	t.Helper()
 
 	c := mcpclient.NewStdioCmdClient("mcp-test", "docker", os.Environ(), args...)
-	t.Cleanup(func() {
-		c.Session().Close()
-	})
 
 	initParams := &mcp.InitializeParams{
 		ProtocolVersion: "2024-11-05",
@@ -69,6 +66,13 @@ func newTestGatewayClient(t *testing.T, args []string) mcpclient.Client {
 
 	err := c.Initialize(t.Context(), initParams, false, nil, nil, nil)
 	require.NoError(t, err)
+
+	// Only register cleanup after successful initialization
+	t.Cleanup(func() {
+		if c != nil && c.Session() != nil {
+			c.Session().Close()
+		}
+	})
 
 	return c
 }
