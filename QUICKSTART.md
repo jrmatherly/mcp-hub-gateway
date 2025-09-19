@@ -9,11 +9,11 @@ This repository contains **two projects**:
 1. **🔧 MCP CLI Plugin & Gateway** - Docker CLI plugin for MCP server management
 2. **🌐 MCP Portal** - Web interface with Azure AD auth and multi-user support
 
-**Current Status**: Portal is ~91% complete (Phases 1-3 done, Phase 4 at 91% complete, Phase 5 OAuth planned)
+**Current Status**: Portal is ~80% complete (Phases 1-3 done, Phase 4 at 60% blocked, Phase 5 at 80% implemented but untested)
 
-**Recent Updates (2025-01-20)**: Fixed catalog test compilation errors, working on test coverage expansion
+**Recent Updates (2025-09-19)**: Major OAuth implementation completed with Azure AD integration, but build system issues blocking validation
 
-**Coming Soon (Phase 5)**: OAuth integration for third-party MCP servers with automatic 401 handling
+**Critical Issue**: Build system blocked by Go module vendor dependencies and test compilation failures
 
 ## Prerequisites
 
@@ -111,13 +111,16 @@ echo "Use this JWT secret: $JWT_SECRET"
 # Copy this value to JWT_SECRET in your .env file
 ```
 
-### 2. Production Deployment with Docker (Working Solution)
+### 2. Production Deployment with Docker (Currently Blocked)
 
 ```bash
-# Use the Docker solution (Phase 4 - 90% complete)
+# ⚠️ WARNING: Build system issues prevent deployment
+# The following commands exist but may fail due to dependency issues
+
+# Deployment script exists but build may fail
 ./deploy-mcp-portal.sh
 
-# Or manually with docker-compose
+# Or manually with docker-compose (build issues likely)
 docker-compose -f docker-compose.mcp-portal.yml up -d
 
 # Check status
@@ -127,12 +130,18 @@ docker-compose -f docker-compose.mcp-portal.yml ps
 docker-compose -f docker-compose.mcp-portal.yml logs -f
 ```
 
-**Note**: The deployment files contain the fully tested containerization solution with:
+**⚠️ Known Issues (September 2025)**:
 
-- Fixed hadolint errors in Dockerfile.mcp-portal
-- Simplified sitemap configuration with NEXT_PUBLIC_SITE_URL
-- Cleaned up obsolete docker/ directory scripts
-- Working multi-stage build for Go backend and Next.js frontend
+- Go module vendor dependencies failing to resolve
+- Test compilation errors preventing builds
+- 8 uncommitted files in portal/features/ directory
+- Frontend build system issues with Next.js imports
+
+**Before attempting deployment, resolve**:
+
+1. Run `go mod tidy` and fix vendor dependencies
+2. Review/commit uncommitted work in portal/features/
+3. Fix test compilation issues
 
 Services will be available at:
 
@@ -421,36 +430,42 @@ docker-compose exec redis redis-cli ping
 
 ## 🧪 Testing
 
-### CLI Testing
+### ⚠️ Testing Currently Blocked
+
+**Critical Issue**: Test compilation failures prevent any testing from running. The build system must be fixed before tests can execute.
+
+### CLI Testing (When Build Fixed)
 
 ```bash
-# Run all tests
+# Currently FAILING due to compilation issues
 make test
 
-# Run specific test suite
+# Will fail with compilation errors
 go test ./cmd/docker-mcp/server/
 
-# Run integration tests
+# Integration tests also blocked
 make integration
 
-# Test with coverage
+# Coverage measurement unavailable
 go test -cover ./...
 ```
 
-### Portal Testing
+### Portal Testing (When Build Fixed)
 
 ```bash
-# Run portal integration tests
+# Currently BLOCKED by build issues
 make portal-test
 
-# Backend unit tests
+# Backend unit tests fail to compile
 go test ./cmd/docker-mcp/portal/...
 
-# Frontend tests (local development)
+# Frontend tests may work independently
 cd cmd/docker-mcp/portal/frontend
 npm run test
 npm run test:coverage
 ```
+
+**Priority Fix Required**: Resolve Go module dependencies and compilation errors before any testing can proceed.
 
 ## 🚀 Building for Production
 
@@ -487,16 +502,17 @@ sudo usermod -aG docker $USER  # Then log out/in for group changes
 docker-compose -f docker-compose.mcp-portal.yml up -d
 ```
 
-## 🔐 Upcoming OAuth Features (Phase 5)
+## 🔐 OAuth Features Status (Phase 5 - 80% Implemented)
 
-**Planned for December 2025** - OAuth integration for third-party MCP servers:
+**Implementation Status (September 2025)** - OAuth integration for third-party MCP servers:
 
-- **OAuth Interceptor**: Automatic 401 handling and token refresh
-- **DCR Bridge**: Dynamic Client Registration with Azure AD translation
-- **Docker Desktop Integration**: Optional credential storage and management
-- **Multi-Provider Support**: GitHub, Google, Microsoft OAuth providers
-- **CLI Commands**: `docker mcp oauth authorize <provider>` for pre-authorization
-- **Feature Flags**: Gradual rollout with provider-specific controls
+- ✅ **OAuth Interceptor**: Automatic 401 handling and token refresh IMPLEMENTED
+- ✅ **DCR Bridge**: Dynamic Client Registration with Azure AD translation COMPLETE
+- ✅ **Azure Key Vault**: Secure credential storage integration IMPLEMENTED
+- ✅ **Multi-Provider Framework**: GitHub, Google, Microsoft OAuth providers READY
+- ✅ **Token Management**: Refresh and retry mechanisms COMPLETE
+- 🔴 **Testing**: BLOCKED by build system issues
+- 🔴 **Validation**: Cannot verify due to compilation failures
 
 See [Phase 5 Documentation](./implementation-plan/02-phases/phase-5-oauth-authentication.md) for full details.
 
@@ -529,20 +545,20 @@ docker mcp server list               # List enabled servers
 docker mcp gateway run               # Start gateway
 docker mcp tools list                # List available tools
 
-# Essential Portal commands
-make portal-up                       # Start production stack
-make portal-dev-up                   # Start development stack
-make portal-logs                     # View all service logs
+# ⚠️ Portal commands (may fail due to build issues)
+make portal-up                       # BLOCKED - build system issues
+make portal-dev-up                   # BLOCKED - compilation failures
+make portal-logs                     # View logs if services running
 
-# Build commands
-make docker-mcp                     # Build CLI
-make test                           # Run tests
-npm run build                       # Build frontend (from frontend dir)
+# ⚠️ Build commands (currently failing)
+make docker-mcp                     # May fail - vendor dependencies
+make test                           # FAILING - test compilation errors
+npm run build                       # Frontend may work independently
 
-# Development commands
-make lint                           # Lint code
-make portal-dev-up                  # Start development environment
-make portal-debug                   # Start with debug tools
+# Fix commands (run these first!)
+go mod tidy                         # Fix Go dependencies
+go mod vendor                       # Update vendor directory
+git status                          # Review uncommitted changes
 ```
 
 ---
