@@ -9,9 +9,11 @@ This repository contains **two projects**:
 1. **🔧 MCP CLI Plugin & Gateway** - Docker CLI plugin for MCP server management
 2. **🌐 MCP Portal** - Web interface with Azure AD auth and multi-user support
 
-**Current Status**: Portal is ~91% complete (Phases 1-3 done, Phase 4 at 91% complete)
+**Current Status**: Portal is ~91% complete (Phases 1-3 done, Phase 4 at 91% complete, Phase 5 OAuth planned)
 
 **Recent Updates (2025-01-20)**: Fixed catalog test compilation errors, working on test coverage expansion
+
+**Coming Soon (Phase 5)**: OAuth integration for third-party MCP servers with automatic 401 handling
 
 ## Prerequisites
 
@@ -484,6 +486,19 @@ docker-compose up -d      # Start production stack
 sudo usermod -aG docker $USER  # Then log out/in for group changes
 docker-compose -f docker-compose.mcp-portal.yml up -d
 ```
+
+## 🔐 Upcoming OAuth Features (Phase 5)
+
+**Planned for December 2025** - OAuth integration for third-party MCP servers:
+
+- **OAuth Interceptor**: Automatic 401 handling and token refresh
+- **DCR Bridge**: Dynamic Client Registration with Azure AD translation
+- **Docker Desktop Integration**: Optional credential storage and management
+- **Multi-Provider Support**: GitHub, Google, Microsoft OAuth providers
+- **CLI Commands**: `docker mcp oauth authorize <provider>` for pre-authorization
+- **Feature Flags**: Gradual rollout with provider-specific controls
+
+See [Phase 5 Documentation](./implementation-plan/02-phases/phase-5-oauth-authentication.md) for full details.
 
 ## 📚 Next Steps
 

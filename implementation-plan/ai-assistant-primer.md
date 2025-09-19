@@ -25,8 +25,8 @@
 
 ### Project Status
 
-- **Phase**: Phase 4 DEPLOYMENT & POLISH (91% complete - Catalog tests fixed, Docker solution working)
-- **Timeline**: On track - Phase 1, 2 & 3 COMPLETE, Phase 4 testing improvements ongoing
+- **Phase**: Phase 4 DEPLOYMENT & POLISH (91% complete) + Phase 5 OAUTH INTEGRATION (planned)
+- **Timeline**: Extended to 12 weeks - Phase 1, 2 & 3 COMPLETE, Phase 4 testing improvements ongoing, Phase 5 upcoming
 - **Current Status**: Backend fully operational, Frontend 100% implemented with admin components, Catalog test compilation fixed
 - **Overall Progress**: ~91% complete - Test infrastructure improvements underway
 - **Codebase**: ~40,000+ lines total (25,000 Go backend + 15,000 TypeScript/React frontend)
@@ -81,6 +81,15 @@
 - ✅ Catalog test compilation errors fixed (78 errors resolved)
 - 🔄 Security audit and penetration testing (90% complete)
 - 🔄 Test coverage expansion to 50%+ (current: 11%, catalog tests fixed)
+
+**Phase 5 OAuth Integration (Planned - 4 weeks)**:
+
+- 🔴 OAuth interceptor middleware for automatic 401 handling
+- 🔴 DCR (Dynamic Client Registration) bridge service for Azure AD
+- 🔴 Docker Desktop secrets integration (optional credential storage)
+- 🔴 Feature flags for gradual OAuth rollout
+- 🔴 Pre-authorization flows for MCP servers
+- 🔴 Support for GitHub, Google, Microsoft OAuth providers
 
 ### Implementation Completion Details (~91% Overall Progress)
 
@@ -643,6 +652,7 @@ docker-compose -f docker-compose.mcp-portal.yml up -d
 - **[Phase 2: Core Features](./02-phases/phase-2-core-features.md)**: Backend implementation (Weeks 3-4)
 - **[Phase 3: Frontend](./02-phases/phase-3-frontend.md)**: UI development (Weeks 5-6)
 - **[Phase 4: Deployment](./02-phases/phase-4-deployment.md)**: Production preparation (Weeks 7-8)
+- **[Phase 5: OAuth Integration](./02-phases/phase-5-oauth-authentication.md)**: OAuth for third-party MCP servers (Weeks 9-12)
 
 ### Operational Documentation
 
@@ -683,7 +693,7 @@ docker-compose -f docker-compose.mcp-portal.yml up -d
 
 ### Development Terms
 
-- **Phase-based Implementation**: 8-week project split into 4 phases
+- **Phase-based Implementation**: 12-week project split into 5 phases (extended for OAuth)
 - **CLI-First Approach**: Web interface functionality derives from CLI capabilities
 - **Streaming Operations**: Long-running CLI commands with real-time progress updates
 - **User Isolation**: Each user has separate CLI context and data access
@@ -721,13 +731,22 @@ docker-compose -f docker-compose.mcp-portal.yml up -d
 - ✅ Per-user Docker network creation
 - ✅ Resource limits and quota enforcement
 
-#### Phase 4: Production Hardening (Weeks 7-8) 🔄 90% COMPLETED
+#### Phase 4: Production Hardening (Weeks 7-8) 🔄 91% COMPLETED
 
 - ✅ Performance optimization and caching
 - ✅ Monitoring and observability integration
 - ✅ Admin UI components and system management
-- 🔄 Security audit and penetration testing (in progress)
-- ✅ Documentation and deployment guides
+- ✅ Docker containerization with production deployment
+- 🔄 Test coverage expansion to 50%+ (current: 11% - critical gap)
+
+#### Phase 5: OAuth Authentication Integration (Weeks 9-12) 🔴 NOT STARTED
+
+- 🔴 OAuth interceptor middleware for automatic 401 handling
+- 🔴 DCR (Dynamic Client Registration) bridge service for Azure AD
+- 🔴 Docker Desktop secrets integration (optional)
+- 🔴 Feature flags for OAuth rollout
+- 🔴 Pre-authorization flows (`docker mcp oauth authorize`)
+- 🔴 Multi-provider support (GitHub, Google, Microsoft)
 
 ### Key Implementation Files
 

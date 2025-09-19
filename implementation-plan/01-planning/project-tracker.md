@@ -9,12 +9,13 @@ Real-time tracking of MCP Portal implementation progress across all phases. Phas
 
 ## Phase Progress Overview
 
-| Phase                  | Progress | Tasks | Status         | Target Date | Actual Date |
-| ---------------------- | -------- | ----- | -------------- | ----------- | ----------- |
-| Phase 1: Foundation    | 100%     | 10/10 | 🟢 Complete    | Week 2      | 2025-09-16  |
-| Phase 2: Core Features | 100%     | 8/8   | 🟢 Complete    | Week 4      | 2025-01-20  |
-| Phase 3: Frontend      | 100%     | 10/10 | 🟢 Complete    | Week 6      | 2025-01-20  |
-| Phase 4: Deployment    | 91%      | 9.1/10| 🟡 In Progress | Week 8      | -           |
+| Phase                  | Progress | Tasks  | Status         | Target Date | Actual Date |
+| ---------------------- | -------- | ------ | -------------- | ----------- | ----------- |
+| Phase 1: Foundation    | 100%     | 10/10  | 🟢 Complete    | Week 2      | 2025-09-16  |
+| Phase 2: Core Features | 100%     | 8/8    | 🟢 Complete    | Week 4      | 2025-01-20  |
+| Phase 3: Frontend      | 100%     | 10/10  | 🟢 Complete    | Week 6      | 2025-01-20  |
+| Phase 4: Deployment    | 91%      | 9.1/10 | 🟡 In Progress | Week 8      | -           |
+| Phase 5: OAuth Auth    | 0%       | 0/32   | 🔴 Not Started | Week 12     | -           |
 
 ## Detailed Task Tracking
 
@@ -84,23 +85,66 @@ Real-time tracking of MCP Portal implementation progress across all phases. Phas
 
 **Phase 4 Total**: 100 hours (80 completed, 20 remaining)
 
+### Phase 5: OAuth & Authentication Integration (Week 9-12)
+
+| ID   | Task                             | Assignee | Est. Hours | Status | Start Date | End Date | Notes                                  |
+| ---- | -------------------------------- | -------- | ---------- | ------ | ---------- | -------- | -------------------------------------- |
+| 5.1  | OAuth Interceptor Base Structure | -        | 8          | 🔴     | -          | -        | Automatic 401 handling middleware      |
+| 5.2  | 401 Response Detection           | -        | 6          | 🔴     | -          | -        | MCP server response analysis           |
+| 5.3  | Token Storage Interface          | -        | 6          | 🔴     | -          | -        | Hierarchical secret management         |
+| 5.4  | Automatic Retry Logic            | -        | 8          | 🔴     | -          | -        | Token refresh and retry patterns       |
+| 5.5  | Server OAuth Configuration       | -        | 6          | 🔴     | -          | -        | Provider-specific OAuth settings       |
+| 5.6  | OAuth Provider Registry          | -        | 4          | 🔴     | -          | -        | GitHub, Google, Microsoft providers    |
+| 5.7  | Interceptor Testing              | -        | 8          | 🔴     | -          | -        | Unit tests for interceptor logic       |
+| 5.8  | Integration Testing              | -        | 8          | 🔴     | -          | -        | Real MCP server OAuth flows            |
+| 5.9  | DCR Bridge Architecture          | -        | 6          | 🔴     | -          | -        | RFC 7591 to Azure AD translation       |
+| 5.10 | RFC 7591 Request Handler         | -        | 8          | 🔴     | -          | -        | Dynamic client registration endpoint   |
+| 5.11 | Azure AD Graph API Client        | -        | 10         | 🔴     | -          | -        | App registration automation            |
+| 5.12 | App Registration Automation      | -        | 12         | 🔴     | -          | -        | Automatic Azure AD app creation        |
+| 5.13 | Client Secret Generation         | -        | 6          | 🔴     | -          | -        | Secure credential generation           |
+| 5.14 | Key Vault Integration            | -        | 8          | 🔴     | -          | -        | Azure Key Vault for production secrets |
+| 5.15 | DCR Response Formatter           | -        | 4          | 🔴     | -          | -        | RFC 7591 compliant responses           |
+| 5.16 | DCR End-to-End Testing           | -        | 10         | 🔴     | -          | -        | Complete DCR flow validation           |
+| 5.17 | Docker Desktop Secrets API       | -        | 8          | 🔴     | -          | -        | Optional credential broker integration |
+| 5.18 | Hierarchical Secret Storage      | -        | 10         | 🔴     | -          | -        | Key Vault → Docker → Env fallback      |
+| 5.19 | OAuth Secret Providers           | -        | 6          | 🔴     | -          | -        | Provider-specific secret handling      |
+| 5.20 | Secret Rotation Service          | -        | 12         | 🔴     | -          | -        | Automatic token refresh management     |
+| 5.21 | Pre-Authorization CLI            | -        | 8          | 🔴     | -          | -        | docker mcp oauth authorize command     |
+| 5.22 | Secret Export/Import             | -        | 6          | 🔴     | -          | -        | Backup and migration functionality     |
+| 5.23 | Secret Encryption Layer          | -        | 8          | 🔴     | -          | -        | At-rest encryption for credentials     |
+| 5.24 | Secret Management Testing        | -        | 8          | 🔴     | -          | -        | Security and functionality validation  |
+| 5.25 | Feature Flag System              | -        | 8          | 🔴     | -          | -        | OAuth gradual rollout control          |
+| 5.26 | OAuth Feature Toggles            | -        | 6          | 🔴     | -          | -        | Provider-specific enable/disable       |
+| 5.27 | Provider Configurations          | -        | 8          | 🔴     | -          | -        | GitHub, Google, Microsoft configs      |
+| 5.28 | PKCE Security Testing            | -        | 12         | 🔴     | -          | -        | OAuth security validation              |
+| 5.29 | Performance Optimization         | -        | 10         | 🔴     | -          | -        | Token operation latency <200ms         |
+| 5.30 | API Documentation                | -        | 8          | 🔴     | -          | -        | OAuth implementation guides            |
+| 5.31 | Multi-Provider Testing           | -        | 12         | 🔴     | -          | -        | Cross-provider integration validation  |
+| 5.32 | Production Deployment Prep       | -        | 8          | 🔴     | -          | -        | OAuth infrastructure readiness         |
+
+**Phase 5 Total**: 252 hours (0 completed, 252 remaining)
+
 ## Resource Summary
 
 | Resource           | Total Hours | Allocated Hours | Available Hours |
 | ------------------ | ----------- | --------------- | --------------- |
-| Backend Developer  | 358         | 0               | 358             |
+| Backend Developer  | 610         | 0               | 610             |
 | Frontend Developer | 106         | 0               | 106             |
-| DevOps Engineer    | 70          | 0               | 70              |
-| QA Engineer        | 40          | 0               | 40              |
+| DevOps Engineer    | 120         | 0               | 120             |
+| Security Engineer  | 60          | 0               | 60              |
+| QA Engineer        | 80          | 0               | 80              |
 
 ## Key Milestones
 
-| Milestone              | Target Date | Status | Criteria                  |
-| ---------------------- | ----------- | ------ | ------------------------- |
-| Authentication Working | Week 2      | 🟢     | Azure AD login functional |
-| Backend API Complete   | Week 4      | 🟢     | 90% endpoints operational |
-| Frontend MVP           | Week 6      | 🟢     | Basic UI functional       |
-| Production Ready       | Week 8      | 🟡     | All tests passing         |
+| Milestone              | Target Date | Status | Criteria                       |
+| ---------------------- | ----------- | ------ | ------------------------------ |
+| Authentication Working | Week 2      | 🟢     | Azure AD login functional      |
+| Backend API Complete   | Week 4      | 🟢     | 90% endpoints operational      |
+| Frontend MVP           | Week 6      | 🟢     | Basic UI functional            |
+| Production Ready       | Week 8      | 🟡     | All tests passing              |
+| OAuth Integration      | Week 10     | 🔴     | MCP server OAuth flows working |
+| DCR Bridge Complete    | Week 11     | 🔴     | Azure AD app automation ready  |
+| OAuth Production Ready | Week 12     | 🔴     | All providers tested           |
 
 ## 📈 Risk Assessment
 
@@ -278,6 +322,7 @@ For each component:
 **Major Accomplishments Today:**
 
 1. **Catalog Test Compilation Errors Fixed** ✅
+
    - Fixed 78 compilation errors in catalog test files
    - Corrected type references (AdminCatalog → Catalog)
    - Updated method signatures to match CatalogRepository interface
@@ -285,6 +330,7 @@ For each component:
    - Created proper mock implementations
 
 2. **Test Files Updated** ✅
+
    - `repository_test.go`: Mock implementation with all 23 CatalogRepository methods
    - `service_multiuser_test.go`: Basic type validation tests
    - All imports and type assertions corrected
@@ -296,12 +342,14 @@ For each component:
    - Module dependencies now properly aligned
 
 **Technical Details:**
+
 - **Type Consolidation**: AdminCatalog and UserCatalog types were removed/consolidated to Catalog
 - **Interface Compliance**: mockPostgresRepository properly implements all required methods
 - **UUID Migration**: All ID fields updated from string to uuid.UUID for consistency
 - **Test Coverage**: Current 11%, targeting 50%+ for production readiness
 
 **Next Steps:**
+
 - Write actual test implementations (currently using nil-returning mocks)
 - Add integration tests for multi-user catalog functionality
 - Test catalog inheritance engine functionality

@@ -30,9 +30,11 @@ The **MCP Portal** is a web-based interface that provides an intuitive way to ma
 - **⚙️ Configuration Management** - Import/export configurations with encryption
 - **📈 Admin Panel** - System monitoring, user management, and audit logs
 
-**Status**: ~98% Complete (Phases 1-3 done, Phase 4 at 90% complete)
+**Status**: ~91% Complete (Phases 1-3 done, Phase 4 at 91% complete)
 
-**Recent Updates (2025-09-18)**: Working Docker deployment solution with simplified infrastructure
+**Recent Updates (2025-01-20)**: Catalog test fixes completed, test infrastructure improvements underway
+
+**Coming Soon (Phase 5)**: Enhanced OAuth integration for third-party MCP servers with automatic 401 handling and Dynamic Client Registration (DCR) support
 
 ## What is MCP?
 
@@ -55,7 +57,7 @@ Developers face criticial barriers when integrating Model Context Protocol (MCP)
 - 🐳 **Container-based Servers**: Run MCP servers as Docker containers with proper isolation.
 - 🔧 **Server Management**: List, inspect, and call MCP tools, resources and prompts from multiple servers.
 - 🔐 **Secrets Management**: Secure handling of API keys and credentials via Docker Desktop.
-- 🌐 **OAuth Integration**: Built-in OAuth flows for service authentication.
+- 🌐 **OAuth Integration**: Built-in OAuth flows for service authentication (Phase 5: Enhanced with automatic 401 handling).
 - 📋 **Server Catalog**: Manage and configure multiple MCP catalogs.
 - 🔍 **Dynamic Discovery**: Automatic tool, prompt, and resource discovery from running servers.
 - 📊 **Monitoring**: Built-in logging and call tracing capabilities.
@@ -382,6 +384,34 @@ Web Browser → Portal Frontend → Portal Backend → CLI Commands → MCP Gate
 The Portal doesn't reimplement MCP functionality - it provides a web interface to the existing CLI with additional enterprise features like user management, audit logging, and bulk operations.
 
 See [docs/message-flow.md](docs/message-flow.md) for detailed message flow diagrams and [Portal Architecture](./implementation-plan/03-architecture/technical-architecture.md) for complete technical details.
+
+## Roadmap
+
+### Phase 5: OAuth & Authentication Integration (Planned - 4 weeks)
+
+Building on the existing OAuth support, Phase 5 will introduce enterprise-grade OAuth management:
+
+**OAuth Interceptor Middleware**
+- Automatic 401 response detection and handling
+- Token refresh with exponential backoff
+- Provider-specific OAuth configuration
+
+**Dynamic Client Registration (DCR)**
+- RFC 7591 compliant DCR bridge service
+- Azure AD Graph API integration for app registration
+- Automatic client credential generation
+
+**Enhanced Secret Management**
+- Docker Desktop secrets integration (optional)
+- Hierarchical storage: Azure Key Vault → Docker Desktop → Environment Variables
+- Pre-authorization CLI commands: `docker mcp oauth authorize <provider>`
+
+**Multi-Provider Support**
+- GitHub, Google, Microsoft OAuth providers
+- Feature flags for gradual rollout
+- Provider marketplace for future expansion
+
+See [Phase 5 Documentation](./implementation-plan/02-phases/phase-5-oauth-authentication.md) for complete implementation details.
 
 ## Contributing
 

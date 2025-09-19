@@ -13,19 +13,20 @@ Implementation of an authenticated portal/dashboard for MCP Server management wi
 
 ## Project Timeline
 
-**Total Duration**: 8 weeks
+**Total Duration**: 12 weeks (extended for OAuth integration)
 **Start Date**: 2025-09-17
-**Current Status**: Week 7 of 8 - Final deployment polish phase
-**Expected Completion**: September 2025 (ahead of original November 2025 target)
+**Current Status**: Week 7 of 12 - Final deployment polish phase
+**Expected Completion**: December 2025 (extended from September for OAuth implementation)
 
 ## Phase Overview
 
-| Phase                                           | Duration  | Focus Area                  | Status         | Progress |
-| ----------------------------------------------- | --------- | --------------------------- | -------------- | -------- |
-| [Phase 1](./02-phases/phase-1-foundation.md)    | Weeks 1-2 | Foundation & Infrastructure | 🟢 Complete    | 100%     |
-| [Phase 2](./02-phases/phase-2-core-features.md) | Weeks 3-4 | Core Features & Backend     | 🟢 Complete    | 100%     |
-| [Phase 3](./02-phases/phase-3-frontend.md)      | Weeks 5-6 | Frontend & UI               | 🟢 Complete    | 100%     |
-| [Phase 4](./02-phases/phase-4-deployment.md)    | Weeks 7-8 | Polish & Deployment         | 🟡 In Progress | 91%      |
+| Phase                                                  | Duration   | Focus Area                  | Status         | Progress |
+| ------------------------------------------------------ | ---------- | --------------------------- | -------------- | -------- |
+| [Phase 1](./02-phases/phase-1-foundation.md)           | Weeks 1-2  | Foundation & Infrastructure | 🟢 Complete    | 100%     |
+| [Phase 2](./02-phases/phase-2-core-features.md)        | Weeks 3-4  | Core Features & Backend     | 🟢 Complete    | 100%     |
+| [Phase 3](./02-phases/phase-3-frontend.md)             | Weeks 5-6  | Frontend & UI               | 🟢 Complete    | 100%     |
+| [Phase 4](./02-phases/phase-4-deployment.md)           | Weeks 7-8  | Polish & Deployment         | 🟡 In Progress | 91%      |
+| [Phase 5](./02-phases/phase-5-oauth-authentication.md) | Weeks 9-12 | OAuth & Authentication      | 🔴 Not Started | 0%       |
 
 ### Phase 1 Achievements (100% Complete - All Components Operational)
 
@@ -87,6 +88,17 @@ Implementation of an authenticated portal/dashboard for MCP Server management wi
 **Testing Status:**
 
 - ⚠️ **Testing Coverage** - 11% coverage (1,801 test lines) vs ~33,500 production lines - Critical gap for production
+
+### Phase 5 Goals (0% - Planning Stage)
+
+**OAuth & Authentication Integration for Third-Party MCP Servers:**
+
+- 🔴 **OAuth Interceptor Middleware** - Automatic 401 response handling (Week 1)
+- 🔴 **DCR Bridge Service** - RFC 7591 to Azure AD translation (Week 2)
+- 🔴 **Docker Desktop Integration** - Optional credential storage (Week 3)
+- 🔴 **Feature Flags & Testing** - Gradual OAuth rollout (Week 4)
+- 🔴 **Multi-Provider Support** - GitHub, Google, Microsoft OAuth providers
+- 🔴 **Pre-Authorization Flows** - `docker mcp oauth authorize` command
 
 ## Quick Links
 
