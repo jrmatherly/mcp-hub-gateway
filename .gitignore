@@ -48,3 +48,4 @@ cmd/docker-mcp/portal/frontend/public/sitemap.xml
 TEMP_DEL/**/.env*
 TEMP_DEL/.env*
 TEMP_DEL/
+code-errors.txt
