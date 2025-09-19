@@ -33,7 +33,6 @@ require (
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/pkg/errors v0.9.1
 	github.com/redis/go-redis/v9 v9.14.0
-	github.com/rs/zerolog v1.34.0
 	github.com/sigstore/cosign/v2 v2.5.0
 	github.com/sigstore/sigstore v1.9.5
 	github.com/spf13/cobra v1.9.1
@@ -52,7 +51,6 @@ require (
 	golang.org/x/sync v0.15.0
 	gopkg.in/op/go-logging.v1 v1.0.0-20160211212156-b2cb9fa56473
 	gopkg.in/yaml.v3 v3.0.1
-	gorm.io/gorm v1.31.0
 )
 
 require (
@@ -142,8 +140,6 @@ require (
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/jedisct1/go-minisign v0.0.0-20241212093149-d2f9f49435c7 // indirect
 	github.com/jinzhu/copier v0.4.0 // indirect
-	github.com/jinzhu/inflection v1.0.0 // indirect
-	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect

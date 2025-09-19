@@ -70,5 +70,9 @@ func Evaluate(
 		)
 	}
 	result = strings.TrimSpace(result)
+	// Add trailing newline for both JSON and YAML as expected by tests
+	if len(result) > 0 {
+		result = result + "\n"
+	}
 	return []byte(result), nil
 }

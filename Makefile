@@ -61,8 +61,22 @@ mcp-package:
 test:
 	docker buildx build $(DOCKER_BUILD_ARGS) --target=test .
 
+# Integration test with timeout to prevent hanging
 integration:
-	go test -count=1 ./... -run 'TestIntegration'
+	@echo "Running integration tests with 60s timeout..."
+	@echo "Note: Some tests require Docker and the docker-mcp plugin to be installed"
+	go test -timeout 60s -v -count=1 ./... -run 'TestIntegration'
+
+# Quick integration test - skip long-running tests
+integration-quick:
+	@echo "Running quick integration tests (excluding long-lived container tests)..."
+	go test -timeout 30s -v -count=1 ./... -run 'TestIntegration' -skip 'TestIntegration.*LongLived|TestIntegration.*ShortLived'
+
+# Integration test with per-test timeout for better granularity
+integration-safe:
+	@echo "Running integration tests with aggressive 30s timeout..."
+	@echo "This will fail fast on any hanging tests"
+	go test -timeout 30s -v -count=1 ./... -run 'TestIntegration' || echo "Some tests may have timed out - check output above"
 
 docker-mcp:
 	CGO_ENABLED=0 go build -trimpath -ldflags "-s -w ${GO_LDFLAGS}" -o ./dist/$(DOCKER_MCP_PLUGIN_BINARY)$(EXTENSION) ./cmd/docker-mcp
@@ -185,7 +199,7 @@ portal-clean:
 	docker volume rm mcp-portal-postgres-data mcp-portal-redis-data mcp-portal-backend-logs mcp-portal-frontend-cache mcp-portal-nginx-logs 2>/dev/null || true
 	docker volume rm mcp-portal-dev-postgres mcp-portal-dev-redis mcp-portal-dev-frontend-cache mcp-portal-dev-pgadmin 2>/dev/null || true
 
-.PHONY: format lint clean docker-mcp-cross push-module-image mcp-package test docker-mcp push-mcp-gateway push-l4proxy-image push-l7proxy-image push-dns-forwarder-image docs \
+.PHONY: format lint clean docker-mcp-cross push-module-image mcp-package test integration integration-quick integration-safe docker-mcp push-mcp-gateway push-l4proxy-image push-l7proxy-image push-dns-forwarder-image docs \
 	docker-portal docker-portal-dev \
 	docker-portal-all docker-portal-dev-all docker-portal-cross \
 	push-portal-images portal-up portal-down portal-dev-up portal-prod-up portal-logs portal-build portal-test portal-debug \

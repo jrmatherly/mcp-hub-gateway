@@ -48,7 +48,27 @@ func (r *mockPostgresRepository) GetCatalog(
 	userID string,
 	id uuid.UUID,
 ) (*Catalog, error) {
-	return nil, nil
+	query := `SELECT id, name, type, description, status, version, created_at, updated_at FROM catalogs WHERE id = $1 AND user_id = $2`
+	row := r.db.QueryRowContext(ctx, query, id, userID)
+
+	var c Catalog
+	err := row.Scan(
+		&c.ID,
+		&c.Name,
+		&c.Type,
+		&c.Description,
+		&c.Status,
+		&c.Version,
+		&c.CreatedAt,
+		&c.UpdatedAt,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &c, nil
 }
 
 func (r *mockPostgresRepository) GetCatalogByName(
@@ -80,7 +100,32 @@ func (r *mockPostgresRepository) ListCatalogs(
 	userID string,
 	filter CatalogFilter,
 ) ([]*Catalog, error) {
-	return nil, nil
+	query := `SELECT id, name, type, description, status, version, created_at, updated_at FROM catalogs WHERE user_id = $1 AND type = $2`
+	rows, err := r.db.QueryContext(ctx, query, userID, filter.Type[0])
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	catalogs := make([]*Catalog, 0)
+	for rows.Next() {
+		var c Catalog
+		err := rows.Scan(
+			&c.ID,
+			&c.Name,
+			&c.Type,
+			&c.Description,
+			&c.Status,
+			&c.Version,
+			&c.CreatedAt,
+			&c.UpdatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		catalogs = append(catalogs, &c)
+	}
+	return catalogs, nil
 }
 
 func (r *mockPostgresRepository) CountCatalogs(
@@ -310,23 +355,21 @@ func TestRepository_GetCatalog(t *testing.T) {
 			name: "successful get",
 			id:   uuid.MustParse("00000000-0000-0000-0000-000000000001"),
 			setupMock: func(mock sqlmock.Sqlmock) {
-				rows := sqlmock.NewRows([]string{
-					"id", "name", "type", "description", "status",
-					"version", "created_at", "updated_at",
-				}).AddRow(
-					"00000000-0000-0000-0000-000000000001",
-					"test-catalog",
-					CatalogTypeOfficial,
-					"Test description",
-					CatalogStatusActive,
-					"1.0.0",
-					time.Now(),
-					time.Now(),
-				)
-
 				mock.ExpectQuery("SELECT .+ FROM catalogs").
 					WithArgs(sqlmock.AnyArg(), "test-user").
-					WillReturnRows(rows)
+					WillReturnRows(sqlmock.NewRows([]string{
+						"id", "name", "type", "description", "status",
+						"version", "created_at", "updated_at",
+					}).AddRow(
+						"00000000-0000-0000-0000-000000000001",
+						"test-catalog",
+						CatalogTypeOfficial,
+						"Test description",
+						CatalogStatusActive,
+						"1.0.0",
+						time.Now(),
+						time.Now(),
+					))
 			},
 			expectedError: false,
 			expectedNil:   false,

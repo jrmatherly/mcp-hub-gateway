@@ -205,10 +205,7 @@ func hashValue(h *maphash.Hash, v reflect.Value) {
 			// Write the length. That distinguishes between, say, two consecutive
 			// maps with disjoint keys from one map that has the items of both.
 			writeUint(uint64(len(keys)))
-			slices.SortFunc(
-				keys,
-				func(x, y reflect.Value) int { return cmp.Compare(x.String(), y.String()) },
-			)
+			slices.SortFunc(keys, func(x, y reflect.Value) int { return cmp.Compare(x.String(), y.String()) })
 			for _, k := range keys {
 				write(k)
 				write(v.MapIndex(k))

@@ -155,9 +155,7 @@ func (root *Schema) Resolve(opts *ResolveOptions) (*Resolved, error) {
 
 	if r.opts.Loader == nil {
 		r.opts.Loader = func(uri *url.URL) (*Schema, error) {
-			return nil, errors.New(
-				"cannot resolve remote schemas: no loader passed to Schema.Resolve",
-			)
+			return nil, errors.New("cannot resolve remote schemas: no loader passed to Schema.Resolve")
 		}
 	}
 
@@ -247,12 +245,8 @@ func (root *Schema) checkStructure(infos map[*Schema]*resolvedInfo) error {
 			// The schema graph at root is not a tree, but it needs to
 			// be because a schema's base must be unique.
 			// A cycle would also put Schema.all into an infinite recursion.
-			return fmt.Errorf(
-				"jsonschema: schemas at %s do not form a tree; %s appears more than once (also at %s)",
-				root,
-				info.path,
-				p,
-			)
+			return fmt.Errorf("jsonschema: schemas at %s do not form a tree; %s appears more than once (also at %s)",
+				root, info.path, p)
 		}
 		infos[s] = &resolvedInfo{s: s, path: p}
 
@@ -407,11 +401,7 @@ func resolveURIs(rs *Resolved, baseURI *url.URL) error {
 			// The base URI for this schema is its $id resolved against the parent base.
 			info.uri = baseInfo.uri.ResolveReference(idURI)
 			if !info.uri.IsAbs() {
-				return fmt.Errorf(
-					"$id %s does not resolve to an absolute URI (base is %q)",
-					s.ID,
-					baseInfo.uri,
-				)
+				return fmt.Errorf("$id %s does not resolve to an absolute URI (base is %q)", s.ID, baseInfo.uri)
 			}
 			rs.resolvedURIs[info.uri.String()] = s
 			base = s // needed for anchors
@@ -488,11 +478,7 @@ func (r *resolver) resolveRefs(rs *Resolved) error {
 }
 
 // resolveRef resolves the reference ref, which is either s.Ref or s.DynamicRef.
-func (r *resolver) resolveRef(
-	rs *Resolved,
-	s *Schema,
-	ref string,
-) (_ *Schema, dynamicFragment string, err error) {
+func (r *resolver) resolveRef(rs *Resolved, s *Schema, ref string) (_ *Schema, dynamicFragment string, err error) {
 	refURI, err := url.Parse(ref)
 	if err != nil {
 		return nil, "", err

@@ -121,13 +121,7 @@ type handler interface {
 	handle(ctx context.Context, req *jsonrpc.Request) (any, error)
 }
 
-func connect[H handler, State any](
-	ctx context.Context,
-	t Transport,
-	b binder[H, State],
-	s State,
-	onClose func(),
-) (H, error) {
+func connect[H handler, State any](ctx context.Context, t Transport, b binder[H, State], s State, onClose func()) (H, error) {
 	var zero H
 	mcpConn, err := t.Connect(ctx)
 	if err != nil {
@@ -183,13 +177,7 @@ func (c *canceller) Preempt(ctx context.Context, req *jsonrpc.Request) (result a
 
 // call executes and awaits a jsonrpc2 call on the given connection,
 // translating errors into the mcp domain.
-func call(
-	ctx context.Context,
-	conn *jsonrpc2.Connection,
-	method string,
-	params Params,
-	result Result,
-) error {
+func call(ctx context.Context, conn *jsonrpc2.Connection, method string, params Params, result Result) error {
 	// TODO: the "%w"s in this function effectively make jsonrpc2.WireError part of the API.
 	// Consider alternatives.
 	call := conn.Call(ctx, method, params)
@@ -394,11 +382,7 @@ func (t *ioConn) addBatch(batch *msgBatch) error {
 	defer t.batchMu.Unlock()
 	for id := range batch.unresolved {
 		if _, ok := t.batches[id]; ok {
-			return fmt.Errorf(
-				"%w: batch contains previously seen request %v",
-				jsonrpc2.ErrInvalidRequest,
-				id.Raw(),
-			)
+			return fmt.Errorf("%w: batch contains previously seen request %v", jsonrpc2.ErrInvalidRequest, id.Raw())
 		}
 	}
 	for id := range batch.unresolved {
@@ -488,11 +472,7 @@ func (t *ioConn) Read(ctx context.Context) (jsonrpc.Message, error) {
 		return nil, err
 	}
 	if batch && t.protocolVersion >= protocolVersion20250618 {
-		return nil, fmt.Errorf(
-			"JSON-RPC batching is not supported in %s and later (request version: %s)",
-			protocolVersion20250618,
-			t.protocolVersion,
-		)
+		return nil, fmt.Errorf("JSON-RPC batching is not supported in %s and later (request version: %s)", protocolVersion20250618, t.protocolVersion)
 	}
 
 	t.queue = msgs[1:]

@@ -81,12 +81,7 @@ func For[T any](opts *ForOptions) (*Schema, error) {
 	for v, s := range opts.TypeSchemas {
 		schemas[reflect.TypeOf(v)] = s
 	}
-	s, err := forType(
-		reflect.TypeFor[T](),
-		map[reflect.Type]bool{},
-		opts.IgnoreInvalidTypes,
-		schemas,
-	)
+	s, err := forType(reflect.TypeFor[T](), map[reflect.Type]bool{}, opts.IgnoreInvalidTypes, schemas)
 	if err != nil {
 		var z T
 		return nil, fmt.Errorf("For[%T](): %w", z, err)
@@ -108,12 +103,7 @@ func ForType(t reflect.Type, opts *ForOptions) (*Schema, error) {
 	return s, nil
 }
 
-func forType(
-	t reflect.Type,
-	seen map[reflect.Type]bool,
-	ignore bool,
-	schemas map[reflect.Type]*Schema,
-) (*Schema, error) {
+func forType(t reflect.Type, seen map[reflect.Type]bool, ignore bool, schemas map[reflect.Type]*Schema) (*Schema, error) {
 	// Follow pointers: the schema for *T is almost the same as for T, except that
 	// an explicit JSON "null" is allowed for the pointer.
 	allowNull := false
@@ -219,11 +209,7 @@ func forType(
 			}
 			if tag, ok := field.Tag.Lookup("jsonschema"); ok {
 				if tag == "" {
-					return nil, fmt.Errorf(
-						"empty jsonschema tag on struct field %s.%s",
-						t,
-						field.Name,
-					)
+					return nil, fmt.Errorf("empty jsonschema tag on struct field %s.%s", t, field.Name)
 				}
 				if disallowedPrefixRegexp.MatchString(tag) {
 					return nil, fmt.Errorf("tag must not begin with 'WORD=': %q", tag)

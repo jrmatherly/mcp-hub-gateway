@@ -76,12 +76,7 @@ type ClientOptions struct {
 
 // bind implements the binder[*ClientSession] interface, so that Clients can
 // be connected using [connect].
-func (c *Client) bind(
-	mcpConn Connection,
-	conn *jsonrpc2.Connection,
-	state *clientSessionState,
-	onClose func(),
-) *ClientSession {
+func (c *Client) bind(mcpConn Connection, conn *jsonrpc2.Connection, state *clientSessionState, onClose func()) *ClientSession {
 	assert(mcpConn != nil && conn != nil, "nil connection")
 	cs := &ClientSession{conn: conn, mcpConn: mcpConn, client: c, onClose: onClose}
 	if state != nil {
@@ -134,11 +129,7 @@ func (c *Client) capabilities() *ClientCapabilities {
 // when it is no longer needed. However, if the connection is closed by the
 // server, calls or notifications will return an error wrapping
 // [ErrConnectionClosed].
-func (c *Client) Connect(
-	ctx context.Context,
-	t Transport,
-	_ *ClientSessionOptions,
-) (cs *ClientSession, err error) {
+func (c *Client) Connect(ctx context.Context, t Transport, _ *ClientSessionOptions) (cs *ClientSession, err error) {
 	cs, err = connect(ctx, t, c, (*clientSessionState)(nil), nil)
 	if err != nil {
 		return nil, err
@@ -285,16 +276,10 @@ func (c *Client) listRoots(_ context.Context, req *ListRootsRequest) (*ListRoots
 	}, nil
 }
 
-func (c *Client) createMessage(
-	ctx context.Context,
-	req *CreateMessageRequest,
-) (*CreateMessageResult, error) {
+func (c *Client) createMessage(ctx context.Context, req *CreateMessageRequest) (*CreateMessageResult, error) {
 	if c.opts.CreateMessageHandler == nil {
 		// TODO: wrap or annotate this error? Pick a standard code?
-		return nil, jsonrpc2.NewError(
-			CodeUnsupportedMethod,
-			"client does not support CreateMessage",
-		)
+		return nil, jsonrpc2.NewError(CodeUnsupportedMethod, "client does not support CreateMessage")
 	}
 	return c.opts.CreateMessageHandler(ctx, req)
 }
@@ -319,17 +304,11 @@ func (c *Client) elicit(ctx context.Context, req *ElicitRequest) (*ElicitResult,
 	if req.Params.RequestedSchema != nil && res.Content != nil {
 		resolved, err := req.Params.RequestedSchema.Resolve(nil)
 		if err != nil {
-			return nil, jsonrpc2.NewError(
-				CodeInvalidParams,
-				fmt.Sprintf("failed to resolve requested schema: %v", err),
-			)
+			return nil, jsonrpc2.NewError(CodeInvalidParams, fmt.Sprintf("failed to resolve requested schema: %v", err))
 		}
 
 		if err := resolved.Validate(res.Content); err != nil {
-			return nil, jsonrpc2.NewError(
-				CodeInvalidParams,
-				fmt.Sprintf("elicitation result content does not match requested schema: %v", err),
-			)
+			return nil, jsonrpc2.NewError(CodeInvalidParams, fmt.Sprintf("elicitation result content does not match requested schema: %v", err))
 		}
 	}
 
@@ -368,10 +347,7 @@ func validateElicitSchema(schema *jsonschema.Schema) error {
 func validateElicitProperty(propName string, propSchema *jsonschema.Schema) error {
 	// Check if this property has nested properties (not allowed)
 	if len(propSchema.Properties) > 0 {
-		return fmt.Errorf(
-			"elicit schema property %q contains nested properties, only primitive properties are allowed",
-			propName,
-		)
+		return fmt.Errorf("elicit schema property %q contains nested properties, only primitive properties are allowed", propName)
 	}
 
 	// Validate based on the property type - only primitives are supported
@@ -383,11 +359,7 @@ func validateElicitProperty(propName string, propSchema *jsonschema.Schema) erro
 	case "boolean":
 		return validateElicitBooleanProperty(propName, propSchema)
 	default:
-		return fmt.Errorf(
-			"elicit schema property %q has unsupported type %q, only string, number, integer, and boolean are allowed",
-			propName,
-			propSchema.Type,
-		)
+		return fmt.Errorf("elicit schema property %q has unsupported type %q, only string, number, integer, and boolean are allowed", propName, propSchema.Type)
 	}
 }
 
@@ -397,11 +369,7 @@ func validateElicitStringProperty(propName string, propSchema *jsonschema.Schema
 	if len(propSchema.Enum) > 0 {
 		// Enums must be string type (or untyped which defaults to string)
 		if propSchema.Type != "" && propSchema.Type != "string" {
-			return fmt.Errorf(
-				"elicit schema property %q has enum values but type is %q, enums are only supported for string type",
-				propName,
-				propSchema.Type,
-			)
+			return fmt.Errorf("elicit schema property %q has enum values but type is %q, enums are only supported for string type", propName, propSchema.Type)
 		}
 		// Enum values themselves are validated by the JSON schema library
 		// Validate enumNames if present - must match enum length
@@ -410,12 +378,7 @@ func validateElicitStringProperty(propName string, propSchema *jsonschema.Schema
 				// Type check enumNames - should be a slice
 				if enumNamesSlice, ok := enumNamesRaw.([]interface{}); ok {
 					if len(enumNamesSlice) != len(propSchema.Enum) {
-						return fmt.Errorf(
-							"elicit schema property %q has %d enum values but %d enumNames, they must match",
-							propName,
-							len(propSchema.Enum),
-							len(enumNamesSlice),
-						)
+						return fmt.Errorf("elicit schema property %q has %d enum values but %d enumNames, they must match", propName, len(propSchema.Enum), len(enumNamesSlice))
 					}
 				} else {
 					return fmt.Errorf("elicit schema property %q has invalid enumNames type, must be an array", propName)
@@ -434,42 +397,25 @@ func validateElicitStringProperty(propName string, propSchema *jsonschema.Schema
 			"date-time": true,
 		}
 		if !allowedFormats[propSchema.Format] {
-			return fmt.Errorf(
-				"elicit schema property %q has unsupported format %q, only email, uri, date, and date-time are allowed",
-				propName,
-				propSchema.Format,
-			)
+			return fmt.Errorf("elicit schema property %q has unsupported format %q, only email, uri, date, and date-time are allowed", propName, propSchema.Format)
 		}
 	}
 
 	// Validate minLength constraint if specified
 	if propSchema.MinLength != nil {
 		if *propSchema.MinLength < 0 {
-			return fmt.Errorf(
-				"elicit schema property %q has invalid minLength %d, must be non-negative",
-				propName,
-				*propSchema.MinLength,
-			)
+			return fmt.Errorf("elicit schema property %q has invalid minLength %d, must be non-negative", propName, *propSchema.MinLength)
 		}
 	}
 
 	// Validate maxLength constraint if specified
 	if propSchema.MaxLength != nil {
 		if *propSchema.MaxLength < 0 {
-			return fmt.Errorf(
-				"elicit schema property %q has invalid maxLength %d, must be non-negative",
-				propName,
-				*propSchema.MaxLength,
-			)
+			return fmt.Errorf("elicit schema property %q has invalid maxLength %d, must be non-negative", propName, *propSchema.MaxLength)
 		}
 		// Check that maxLength >= minLength if both are specified
 		if propSchema.MinLength != nil && *propSchema.MaxLength < *propSchema.MinLength {
-			return fmt.Errorf(
-				"elicit schema property %q has maxLength %d less than minLength %d",
-				propName,
-				*propSchema.MaxLength,
-				*propSchema.MinLength,
-			)
+			return fmt.Errorf("elicit schema property %q has maxLength %d less than minLength %d", propName, *propSchema.MaxLength, *propSchema.MinLength)
 		}
 	}
 
@@ -480,12 +426,7 @@ func validateElicitStringProperty(propName string, propSchema *jsonschema.Schema
 func validateElicitNumberProperty(propName string, propSchema *jsonschema.Schema) error {
 	if propSchema.Minimum != nil && propSchema.Maximum != nil {
 		if *propSchema.Maximum < *propSchema.Minimum {
-			return fmt.Errorf(
-				"elicit schema property %q has maximum %g less than minimum %g",
-				propName,
-				*propSchema.Maximum,
-				*propSchema.Minimum,
-			)
+			return fmt.Errorf("elicit schema property %q has maximum %g less than minimum %g", propName, *propSchema.Maximum, *propSchema.Minimum)
 		}
 	}
 
@@ -498,11 +439,7 @@ func validateElicitBooleanProperty(propName string, propSchema *jsonschema.Schem
 	if propSchema.Default != nil {
 		var defaultValue bool
 		if err := json.Unmarshal(propSchema.Default, &defaultValue); err != nil {
-			return fmt.Errorf(
-				"elicit schema property %q has invalid default value, must be a boolean: %v",
-				propName,
-				err,
-			)
+			return fmt.Errorf("elicit schema property %q has invalid default value, must be a boolean: %v", propName, err)
 		}
 	}
 
@@ -545,51 +482,18 @@ func (c *Client) AddReceivingMiddleware(middleware ...Middleware) {
 // TODO(rfindley): actually load and validate the protocol schema, rather than
 // curating these method flags.
 var clientMethodInfos = map[string]methodInfo{
-	methodComplete: newClientMethodInfo(
-		clientSessionMethod((*ClientSession).Complete),
-		0,
-	),
-	methodPing: newClientMethodInfo(
-		clientSessionMethod((*ClientSession).ping),
-		missingParamsOK,
-	),
-	methodListRoots: newClientMethodInfo(
-		clientMethod((*Client).listRoots),
-		missingParamsOK,
-	),
-	methodCreateMessage: newClientMethodInfo(clientMethod((*Client).createMessage), 0),
-	methodElicit: newClientMethodInfo(
-		clientMethod((*Client).elicit),
-		missingParamsOK,
-	),
-	notificationCancelled: newClientMethodInfo(
-		clientSessionMethod((*ClientSession).cancel),
-		notification|missingParamsOK,
-	),
-	notificationToolListChanged: newClientMethodInfo(
-		clientMethod((*Client).callToolChangedHandler),
-		notification|missingParamsOK,
-	),
-	notificationPromptListChanged: newClientMethodInfo(
-		clientMethod((*Client).callPromptChangedHandler),
-		notification|missingParamsOK,
-	),
-	notificationResourceListChanged: newClientMethodInfo(
-		clientMethod((*Client).callResourceChangedHandler),
-		notification|missingParamsOK,
-	),
-	notificationResourceUpdated: newClientMethodInfo(
-		clientMethod((*Client).callResourceUpdatedHandler),
-		notification|missingParamsOK,
-	),
-	notificationLoggingMessage: newClientMethodInfo(
-		clientMethod((*Client).callLoggingHandler),
-		notification,
-	),
-	notificationProgress: newClientMethodInfo(
-		clientSessionMethod((*ClientSession).callProgressNotificationHandler),
-		notification,
-	),
+	methodComplete:                  newClientMethodInfo(clientSessionMethod((*ClientSession).Complete), 0),
+	methodPing:                      newClientMethodInfo(clientSessionMethod((*ClientSession).ping), missingParamsOK),
+	methodListRoots:                 newClientMethodInfo(clientMethod((*Client).listRoots), missingParamsOK),
+	methodCreateMessage:             newClientMethodInfo(clientMethod((*Client).createMessage), 0),
+	methodElicit:                    newClientMethodInfo(clientMethod((*Client).elicit), missingParamsOK),
+	notificationCancelled:           newClientMethodInfo(clientSessionMethod((*ClientSession).cancel), notification|missingParamsOK),
+	notificationToolListChanged:     newClientMethodInfo(clientMethod((*Client).callToolChangedHandler), notification|missingParamsOK),
+	notificationPromptListChanged:   newClientMethodInfo(clientMethod((*Client).callPromptChangedHandler), notification|missingParamsOK),
+	notificationResourceListChanged: newClientMethodInfo(clientMethod((*Client).callResourceChangedHandler), notification|missingParamsOK),
+	notificationResourceUpdated:     newClientMethodInfo(clientMethod((*Client).callResourceUpdatedHandler), notification|missingParamsOK),
+	notificationLoggingMessage:      newClientMethodInfo(clientMethod((*Client).callLoggingHandler), notification),
+	notificationProgress:            newClientMethodInfo(clientSessionMethod((*ClientSession).callProgressNotificationHandler), notification),
 }
 
 func (cs *ClientSession) sendingMethodInfos() map[string]methodInfo {
@@ -641,56 +545,28 @@ func newClientRequest[P Params](cs *ClientSession, params P) *ClientRequest[P] {
 
 // Ping makes an MCP "ping" request to the server.
 func (cs *ClientSession) Ping(ctx context.Context, params *PingParams) error {
-	_, err := handleSend[*emptyResult](
-		ctx,
-		methodPing,
-		newClientRequest(cs, orZero[Params](params)),
-	)
+	_, err := handleSend[*emptyResult](ctx, methodPing, newClientRequest(cs, orZero[Params](params)))
 	return err
 }
 
 // ListPrompts lists prompts that are currently available on the server.
-func (cs *ClientSession) ListPrompts(
-	ctx context.Context,
-	params *ListPromptsParams,
-) (*ListPromptsResult, error) {
-	return handleSend[*ListPromptsResult](
-		ctx,
-		methodListPrompts,
-		newClientRequest(cs, orZero[Params](params)),
-	)
+func (cs *ClientSession) ListPrompts(ctx context.Context, params *ListPromptsParams) (*ListPromptsResult, error) {
+	return handleSend[*ListPromptsResult](ctx, methodListPrompts, newClientRequest(cs, orZero[Params](params)))
 }
 
 // GetPrompt gets a prompt from the server.
-func (cs *ClientSession) GetPrompt(
-	ctx context.Context,
-	params *GetPromptParams,
-) (*GetPromptResult, error) {
-	return handleSend[*GetPromptResult](
-		ctx,
-		methodGetPrompt,
-		newClientRequest(cs, orZero[Params](params)),
-	)
+func (cs *ClientSession) GetPrompt(ctx context.Context, params *GetPromptParams) (*GetPromptResult, error) {
+	return handleSend[*GetPromptResult](ctx, methodGetPrompt, newClientRequest(cs, orZero[Params](params)))
 }
 
 // ListTools lists tools that are currently available on the server.
-func (cs *ClientSession) ListTools(
-	ctx context.Context,
-	params *ListToolsParams,
-) (*ListToolsResult, error) {
-	return handleSend[*ListToolsResult](
-		ctx,
-		methodListTools,
-		newClientRequest(cs, orZero[Params](params)),
-	)
+func (cs *ClientSession) ListTools(ctx context.Context, params *ListToolsParams) (*ListToolsResult, error) {
+	return handleSend[*ListToolsResult](ctx, methodListTools, newClientRequest(cs, orZero[Params](params)))
 }
 
 // CallTool calls the tool with the given name and arguments.
 // The arguments can be any value that marshals into a JSON object.
-func (cs *ClientSession) CallTool(
-	ctx context.Context,
-	params *CallToolParams,
-) (*CallToolResult, error) {
+func (cs *ClientSession) CallTool(ctx context.Context, params *CallToolParams) (*CallToolResult, error) {
 	if params == nil {
 		params = new(CallToolParams)
 	}
@@ -698,145 +574,83 @@ func (cs *ClientSession) CallTool(
 		// Avoid sending nil over the wire.
 		params.Arguments = map[string]any{}
 	}
-	return handleSend[*CallToolResult](
-		ctx,
-		methodCallTool,
-		newClientRequest(cs, orZero[Params](params)),
-	)
+	return handleSend[*CallToolResult](ctx, methodCallTool, newClientRequest(cs, orZero[Params](params)))
 }
 
 func (cs *ClientSession) SetLoggingLevel(ctx context.Context, params *SetLoggingLevelParams) error {
-	_, err := handleSend[*emptyResult](
-		ctx,
-		methodSetLevel,
-		newClientRequest(cs, orZero[Params](params)),
-	)
+	_, err := handleSend[*emptyResult](ctx, methodSetLevel, newClientRequest(cs, orZero[Params](params)))
 	return err
 }
 
 // ListResources lists the resources that are currently available on the server.
-func (cs *ClientSession) ListResources(
-	ctx context.Context,
-	params *ListResourcesParams,
-) (*ListResourcesResult, error) {
-	return handleSend[*ListResourcesResult](
-		ctx,
-		methodListResources,
-		newClientRequest(cs, orZero[Params](params)),
-	)
+func (cs *ClientSession) ListResources(ctx context.Context, params *ListResourcesParams) (*ListResourcesResult, error) {
+	return handleSend[*ListResourcesResult](ctx, methodListResources, newClientRequest(cs, orZero[Params](params)))
 }
 
 // ListResourceTemplates lists the resource templates that are currently available on the server.
-func (cs *ClientSession) ListResourceTemplates(
-	ctx context.Context,
-	params *ListResourceTemplatesParams,
-) (*ListResourceTemplatesResult, error) {
-	return handleSend[*ListResourceTemplatesResult](
-		ctx,
-		methodListResourceTemplates,
-		newClientRequest(cs, orZero[Params](params)),
-	)
+func (cs *ClientSession) ListResourceTemplates(ctx context.Context, params *ListResourceTemplatesParams) (*ListResourceTemplatesResult, error) {
+	return handleSend[*ListResourceTemplatesResult](ctx, methodListResourceTemplates, newClientRequest(cs, orZero[Params](params)))
 }
 
 // ReadResource asks the server to read a resource and return its contents.
-func (cs *ClientSession) ReadResource(
-	ctx context.Context,
-	params *ReadResourceParams,
-) (*ReadResourceResult, error) {
-	return handleSend[*ReadResourceResult](
-		ctx,
-		methodReadResource,
-		newClientRequest(cs, orZero[Params](params)),
-	)
+func (cs *ClientSession) ReadResource(ctx context.Context, params *ReadResourceParams) (*ReadResourceResult, error) {
+	return handleSend[*ReadResourceResult](ctx, methodReadResource, newClientRequest(cs, orZero[Params](params)))
 }
 
-func (cs *ClientSession) Complete(
-	ctx context.Context,
-	params *CompleteParams,
-) (*CompleteResult, error) {
-	return handleSend[*CompleteResult](
-		ctx,
-		methodComplete,
-		newClientRequest(cs, orZero[Params](params)),
-	)
+func (cs *ClientSession) Complete(ctx context.Context, params *CompleteParams) (*CompleteResult, error) {
+	return handleSend[*CompleteResult](ctx, methodComplete, newClientRequest(cs, orZero[Params](params)))
 }
 
 // Subscribe sends a "resources/subscribe" request to the server, asking for
 // notifications when the specified resource changes.
 func (cs *ClientSession) Subscribe(ctx context.Context, params *SubscribeParams) error {
-	_, err := handleSend[*emptyResult](
-		ctx,
-		methodSubscribe,
-		newClientRequest(cs, orZero[Params](params)),
-	)
+	_, err := handleSend[*emptyResult](ctx, methodSubscribe, newClientRequest(cs, orZero[Params](params)))
 	return err
 }
 
 // Unsubscribe sends a "resources/unsubscribe" request to the server, cancelling
 // a previous subscription.
 func (cs *ClientSession) Unsubscribe(ctx context.Context, params *UnsubscribeParams) error {
-	_, err := handleSend[*emptyResult](
-		ctx,
-		methodUnsubscribe,
-		newClientRequest(cs, orZero[Params](params)),
-	)
+	_, err := handleSend[*emptyResult](ctx, methodUnsubscribe, newClientRequest(cs, orZero[Params](params)))
 	return err
 }
 
-func (c *Client) callToolChangedHandler(
-	ctx context.Context,
-	req *ToolListChangedRequest,
-) (Result, error) {
+func (c *Client) callToolChangedHandler(ctx context.Context, req *ToolListChangedRequest) (Result, error) {
 	if h := c.opts.ToolListChangedHandler; h != nil {
 		h(ctx, req)
 	}
 	return nil, nil
 }
 
-func (c *Client) callPromptChangedHandler(
-	ctx context.Context,
-	req *PromptListChangedRequest,
-) (Result, error) {
+func (c *Client) callPromptChangedHandler(ctx context.Context, req *PromptListChangedRequest) (Result, error) {
 	if h := c.opts.PromptListChangedHandler; h != nil {
 		h(ctx, req)
 	}
 	return nil, nil
 }
 
-func (c *Client) callResourceChangedHandler(
-	ctx context.Context,
-	req *ResourceListChangedRequest,
-) (Result, error) {
+func (c *Client) callResourceChangedHandler(ctx context.Context, req *ResourceListChangedRequest) (Result, error) {
 	if h := c.opts.ResourceListChangedHandler; h != nil {
 		h(ctx, req)
 	}
 	return nil, nil
 }
 
-func (c *Client) callResourceUpdatedHandler(
-	ctx context.Context,
-	req *ResourceUpdatedNotificationRequest,
-) (Result, error) {
+func (c *Client) callResourceUpdatedHandler(ctx context.Context, req *ResourceUpdatedNotificationRequest) (Result, error) {
 	if h := c.opts.ResourceUpdatedHandler; h != nil {
 		h(ctx, req)
 	}
 	return nil, nil
 }
 
-func (c *Client) callLoggingHandler(
-	ctx context.Context,
-	req *LoggingMessageRequest,
-) (Result, error) {
+func (c *Client) callLoggingHandler(ctx context.Context, req *LoggingMessageRequest) (Result, error) {
 	if h := c.opts.LoggingMessageHandler; h != nil {
 		h(ctx, req)
 	}
 	return nil, nil
 }
 
-func (cs *ClientSession) callProgressNotificationHandler(
-	ctx context.Context,
-	params *ProgressNotificationParams,
-) (Result, error) {
+func (cs *ClientSession) callProgressNotificationHandler(ctx context.Context, params *ProgressNotificationParams) (Result, error) {
 	if h := cs.client.opts.ProgressNotificationHandler; h != nil {
 		h(ctx, clientRequestFor(cs, params))
 	}
@@ -847,10 +661,7 @@ func (cs *ClientSession) callProgressNotificationHandler(
 // associated with this session.
 // This can be used if the client is performing a long-running task that was
 // initiated by the server
-func (cs *ClientSession) NotifyProgress(
-	ctx context.Context,
-	params *ProgressNotificationParams,
-) error {
+func (cs *ClientSession) NotifyProgress(ctx context.Context, params *ProgressNotificationParams) error {
 	return handleNotify(ctx, notificationProgress, newClientRequest(cs, orZero[Params](params)))
 }
 
@@ -858,10 +669,7 @@ func (cs *ClientSession) NotifyProgress(
 // automatically fetching pages and managing cursors.
 // The params argument can set the initial cursor.
 // Iteration stops at the first encountered error, which will be yielded.
-func (cs *ClientSession) Tools(
-	ctx context.Context,
-	params *ListToolsParams,
-) iter.Seq2[*Tool, error] {
+func (cs *ClientSession) Tools(ctx context.Context, params *ListToolsParams) iter.Seq2[*Tool, error] {
 	if params == nil {
 		params = &ListToolsParams{}
 	}
@@ -874,10 +682,7 @@ func (cs *ClientSession) Tools(
 // automatically fetching pages and managing cursors.
 // The params argument can set the initial cursor.
 // Iteration stops at the first encountered error, which will be yielded.
-func (cs *ClientSession) Resources(
-	ctx context.Context,
-	params *ListResourcesParams,
-) iter.Seq2[*Resource, error] {
+func (cs *ClientSession) Resources(ctx context.Context, params *ListResourcesParams) iter.Seq2[*Resource, error] {
 	if params == nil {
 		params = &ListResourcesParams{}
 	}
@@ -890,31 +695,20 @@ func (cs *ClientSession) Resources(
 // automatically fetching pages and managing cursors.
 // The `params` argument can set the initial cursor.
 // Iteration stops at the first encountered error, which will be yielded.
-func (cs *ClientSession) ResourceTemplates(
-	ctx context.Context,
-	params *ListResourceTemplatesParams,
-) iter.Seq2[*ResourceTemplate, error] {
+func (cs *ClientSession) ResourceTemplates(ctx context.Context, params *ListResourceTemplatesParams) iter.Seq2[*ResourceTemplate, error] {
 	if params == nil {
 		params = &ListResourceTemplatesParams{}
 	}
-	return paginate(
-		ctx,
-		params,
-		cs.ListResourceTemplates,
-		func(res *ListResourceTemplatesResult) []*ResourceTemplate {
-			return res.ResourceTemplates
-		},
-	)
+	return paginate(ctx, params, cs.ListResourceTemplates, func(res *ListResourceTemplatesResult) []*ResourceTemplate {
+		return res.ResourceTemplates
+	})
 }
 
 // Prompts provides an iterator for all prompts available on the server,
 // automatically fetching pages and managing cursors.
 // The params argument can set the initial cursor.
 // Iteration stops at the first encountered error, which will be yielded.
-func (cs *ClientSession) Prompts(
-	ctx context.Context,
-	params *ListPromptsParams,
-) iter.Seq2[*Prompt, error] {
+func (cs *ClientSession) Prompts(ctx context.Context, params *ListPromptsParams) iter.Seq2[*Prompt, error] {
 	if params == nil {
 		params = &ListPromptsParams{}
 	}
@@ -924,12 +718,7 @@ func (cs *ClientSession) Prompts(
 }
 
 // paginate is a generic helper function to provide a paginated iterator.
-func paginate[P listParams, R listResult[T], T any](
-	ctx context.Context,
-	params P,
-	listFunc func(context.Context, P) (R, error),
-	items func(R) []*T,
-) iter.Seq2[*T, error] {
+func paginate[P listParams, R listResult[T], T any](ctx context.Context, params P, listFunc func(context.Context, P) (R, error), items func(R) []*T) iter.Seq2[*T, error] {
 	return func(yield func(*T, error) bool) {
 		for {
 			res, err := listFunc(ctx, params)

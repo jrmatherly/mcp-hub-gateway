@@ -290,12 +290,7 @@ func (s *MemoryEventStore) init(sessionID string, streamID StreamID) *dataList {
 }
 
 // Append implements [EventStore.Append] by recording data in memory.
-func (s *MemoryEventStore) Append(
-	_ context.Context,
-	sessionID string,
-	streamID StreamID,
-	data []byte,
-) error {
+func (s *MemoryEventStore) Append(_ context.Context, sessionID string, streamID StreamID, data []byte) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	dl := s.init(sessionID, streamID)
@@ -312,12 +307,7 @@ func (s *MemoryEventStore) Append(
 var ErrEventsPurged = errors.New("data purged")
 
 // After implements [EventStore.After].
-func (s *MemoryEventStore) After(
-	_ context.Context,
-	sessionID string,
-	streamID StreamID,
-	index int,
-) iter.Seq2[[]byte, error] {
+func (s *MemoryEventStore) After(_ context.Context, sessionID string, streamID StreamID, index int) iter.Seq2[[]byte, error] {
 	// Return the data items to yield.
 	// We must copy, because dataList.removeFirst nils out slice elements.
 	copyData := func() ([][]byte, error) {
@@ -329,11 +319,7 @@ func (s *MemoryEventStore) After(
 		}
 		dl, ok := streamMap[streamID]
 		if !ok {
-			return nil, fmt.Errorf(
-				"MemoryEventStore.After: unknown stream ID %v in session %q",
-				streamID,
-				sessionID,
-			)
+			return nil, fmt.Errorf("MemoryEventStore.After: unknown stream ID %v in session %q", streamID, sessionID)
 		}
 		start := index + 1
 		if dl.first > start {

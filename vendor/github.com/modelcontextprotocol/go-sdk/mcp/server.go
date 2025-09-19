@@ -115,18 +115,12 @@ func NewServer(impl *Implementation, options *ServerOptions) *Server {
 		panic("UnsubscribeHandler requires SubscribeHandler")
 	}
 	return &Server{
-		impl: impl,
-		opts: opts,
-		prompts: newFeatureSet(
-			func(p *serverPrompt) string { return p.prompt.Name },
-		),
-		tools: newFeatureSet(func(t *serverTool) string { return t.tool.Name }),
-		resources: newFeatureSet(
-			func(r *serverResource) string { return r.resource.URI },
-		),
-		resourceTemplates: newFeatureSet(
-			func(t *serverResourceTemplate) string { return t.resourceTemplate.URITemplate },
-		),
+		impl:                    impl,
+		opts:                    opts,
+		prompts:                 newFeatureSet(func(p *serverPrompt) string { return p.prompt.Name }),
+		tools:                   newFeatureSet(func(t *serverTool) string { return t.tool.Name }),
+		resources:               newFeatureSet(func(r *serverResource) string { return r.resource.URI }),
+		resourceTemplates:       newFeatureSet(func(t *serverResourceTemplate) string { return t.resourceTemplate.URITemplate }),
 		sendingMethodHandler_:   defaultSendingMethodHandler[*ServerSession],
 		receivingMethodHandler_: defaultReceivingMethodHandler[*ServerSession],
 		resourceSubscriptions:   make(map[string]map[*ServerSession]bool),
@@ -235,11 +229,7 @@ func toolForErr[In, Out any](t *Tool, h ToolHandlerFor[In, Out]) (*Tool, ToolHan
 		input, err = applySchema(input, inputResolved)
 		if err != nil {
 			// TODO(#450): should this be considered a tool error? (and similar below)
-			return nil, fmt.Errorf(
-				"%w: validating \"arguments\": %v",
-				jsonrpc2.ErrInvalidParams,
-				err,
-			)
+			return nil, fmt.Errorf("%w: validating \"arguments\": %v", jsonrpc2.ErrInvalidParams, err)
 		}
 
 		// Unmarshal and validate args.
@@ -326,10 +316,7 @@ func toolForErr[In, Out any](t *Tool, h ToolHandlerFor[In, Out]) (*Tool, ToolHan
 //
 // TODO(rfindley): we really shouldn't ever return 'null' results. Maybe we
 // should have a jsonschema.Zero(schema) helper?
-func setSchema[T any](
-	sfield **jsonschema.Schema,
-	rfield **jsonschema.Resolved,
-) (zero any, err error) {
+func setSchema[T any](sfield **jsonschema.Schema, rfield **jsonschema.Resolved) (zero any, err error) {
 	if *sfield == nil {
 		rt := reflect.TypeFor[T]()
 		if rt.Kind() == reflect.Pointer {
@@ -470,27 +457,18 @@ func (s *Server) Sessions() iter.Seq[*ServerSession] {
 	return slices.Values(clients)
 }
 
-func (s *Server) listPrompts(
-	_ context.Context,
-	req *ListPromptsRequest,
-) (*ListPromptsResult, error) {
+func (s *Server) listPrompts(_ context.Context, req *ListPromptsRequest) (*ListPromptsResult, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if req.Params == nil {
 		req.Params = &ListPromptsParams{}
 	}
-	return paginateList(
-		s.prompts,
-		s.opts.PageSize,
-		req.Params,
-		&ListPromptsResult{},
-		func(res *ListPromptsResult, prompts []*serverPrompt) {
-			res.Prompts = []*Prompt{} // avoid JSON null
-			for _, p := range prompts {
-				res.Prompts = append(res.Prompts, p.prompt)
-			}
-		},
-	)
+	return paginateList(s.prompts, s.opts.PageSize, req.Params, &ListPromptsResult{}, func(res *ListPromptsResult, prompts []*serverPrompt) {
+		res.Prompts = []*Prompt{} // avoid JSON null
+		for _, p := range prompts {
+			res.Prompts = append(res.Prompts, p.prompt)
+		}
+	})
 }
 
 func (s *Server) getPrompt(ctx context.Context, req *GetPromptRequest) (*GetPromptResult, error) {
@@ -513,18 +491,12 @@ func (s *Server) listTools(_ context.Context, req *ListToolsRequest) (*ListTools
 	if req.Params == nil {
 		req.Params = &ListToolsParams{}
 	}
-	return paginateList(
-		s.tools,
-		s.opts.PageSize,
-		req.Params,
-		&ListToolsResult{},
-		func(res *ListToolsResult, tools []*serverTool) {
-			res.Tools = []*Tool{} // avoid JSON null
-			for _, t := range tools {
-				res.Tools = append(res.Tools, t.tool)
-			}
-		},
-	)
+	return paginateList(s.tools, s.opts.PageSize, req.Params, &ListToolsResult{}, func(res *ListToolsResult, tools []*serverTool) {
+		res.Tools = []*Tool{} // avoid JSON null
+		for _, t := range tools {
+			res.Tools = append(res.Tools, t.tool)
+		}
+	})
 }
 
 func (s *Server) callTool(ctx context.Context, req *CallToolRequest) (*CallToolResult, error) {
@@ -546,56 +518,36 @@ func (s *Server) callTool(ctx context.Context, req *CallToolRequest) (*CallToolR
 	return res, err
 }
 
-func (s *Server) listResources(
-	_ context.Context,
-	req *ListResourcesRequest,
-) (*ListResourcesResult, error) {
+func (s *Server) listResources(_ context.Context, req *ListResourcesRequest) (*ListResourcesResult, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if req.Params == nil {
 		req.Params = &ListResourcesParams{}
 	}
-	return paginateList(
-		s.resources,
-		s.opts.PageSize,
-		req.Params,
-		&ListResourcesResult{},
-		func(res *ListResourcesResult, resources []*serverResource) {
-			res.Resources = []*Resource{} // avoid JSON null
-			for _, r := range resources {
-				res.Resources = append(res.Resources, r.resource)
-			}
-		},
-	)
+	return paginateList(s.resources, s.opts.PageSize, req.Params, &ListResourcesResult{}, func(res *ListResourcesResult, resources []*serverResource) {
+		res.Resources = []*Resource{} // avoid JSON null
+		for _, r := range resources {
+			res.Resources = append(res.Resources, r.resource)
+		}
+	})
 }
 
-func (s *Server) listResourceTemplates(
-	_ context.Context,
-	req *ListResourceTemplatesRequest,
-) (*ListResourceTemplatesResult, error) {
+func (s *Server) listResourceTemplates(_ context.Context, req *ListResourceTemplatesRequest) (*ListResourceTemplatesResult, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if req.Params == nil {
 		req.Params = &ListResourceTemplatesParams{}
 	}
-	return paginateList(
-		s.resourceTemplates,
-		s.opts.PageSize,
-		req.Params,
-		&ListResourceTemplatesResult{},
+	return paginateList(s.resourceTemplates, s.opts.PageSize, req.Params, &ListResourceTemplatesResult{},
 		func(res *ListResourceTemplatesResult, rts []*serverResourceTemplate) {
 			res.ResourceTemplates = []*ResourceTemplate{} // avoid JSON null
 			for _, rt := range rts {
 				res.ResourceTemplates = append(res.ResourceTemplates, rt.resourceTemplate)
 			}
-		},
-	)
+		})
 }
 
-func (s *Server) readResource(
-	ctx context.Context,
-	req *ReadResourceRequest,
-) (*ReadResourceResult, error) {
+func (s *Server) readResource(ctx context.Context, req *ReadResourceRequest) (*ReadResourceResult, error) {
 	uri := req.Params.URI
 	// Look up the resource URI in the lists of resources and resource templates.
 	// This is a security check as well as an information lookup.
@@ -686,10 +638,7 @@ func fileResourceHandler(dir string) ResourceHandler {
 // ResourceUpdated sends a notification to all clients that have subscribed to the
 // resource specified in params. This method is the primary way for a
 // server author to signal that a resource has changed.
-func (s *Server) ResourceUpdated(
-	ctx context.Context,
-	params *ResourceUpdatedNotificationParams,
-) error {
+func (s *Server) ResourceUpdated(ctx context.Context, params *ResourceUpdatedNotificationParams) error {
 	s.mu.Lock()
 	subscribedSessions := s.resourceSubscriptions[params.URI]
 	sessions := slices.Collect(maps.Keys(subscribedSessions))
@@ -700,10 +649,7 @@ func (s *Server) ResourceUpdated(
 
 func (s *Server) subscribe(ctx context.Context, req *SubscribeRequest) (*emptyResult, error) {
 	if s.opts.SubscribeHandler == nil {
-		return nil, fmt.Errorf(
-			"%w: server does not support resource subscriptions",
-			jsonrpc2.ErrMethodNotFound,
-		)
+		return nil, fmt.Errorf("%w: server does not support resource subscriptions", jsonrpc2.ErrMethodNotFound)
 	}
 	if err := s.opts.SubscribeHandler(ctx, req); err != nil {
 		return nil, err
@@ -775,12 +721,7 @@ func (s *Server) Run(ctx context.Context, t Transport) error {
 
 // bind implements the binder[*ServerSession] interface, so that Servers can
 // be connected using [connect].
-func (s *Server) bind(
-	mcpConn Connection,
-	conn *jsonrpc2.Connection,
-	state *ServerSessionState,
-	onClose func(),
-) *ServerSession {
+func (s *Server) bind(mcpConn Connection, conn *jsonrpc2.Connection, state *ServerSessionState, onClose func()) *ServerSession {
 	assert(mcpConn != nil && conn != nil, "nil connection")
 	ss := &ServerSession{conn: conn, mcpConn: mcpConn, server: s, onClose: onClose}
 	if state != nil {
@@ -821,11 +762,7 @@ type ServerSessionOptions struct {
 // [Connection.Wait]).
 //
 // If opts.State is non-nil, it is the initial state for the server.
-func (s *Server) Connect(
-	ctx context.Context,
-	t Transport,
-	opts *ServerSessionOptions,
-) (*ServerSession, error) {
+func (s *Server) Connect(ctx context.Context, t Transport, opts *ServerSessionOptions) (*ServerSession, error) {
 	var state *ServerSessionState
 	var onClose func()
 	if opts != nil {
@@ -836,10 +773,7 @@ func (s *Server) Connect(
 }
 
 // TODO: (nit) move all ServerSession methods below the ServerSession declaration.
-func (ss *ServerSession) initialized(
-	ctx context.Context,
-	params *InitializedParams,
-) (Result, error) {
+func (ss *ServerSession) initialized(ctx context.Context, params *InitializedParams) (Result, error) {
 	if params == nil {
 		// Since we use nilness to signal 'initialized' state, we must ensure that
 		// params are non-nil.
@@ -869,20 +803,14 @@ func (ss *ServerSession) initialized(
 	return nil, nil
 }
 
-func (s *Server) callRootsListChangedHandler(
-	ctx context.Context,
-	req *RootsListChangedRequest,
-) (Result, error) {
+func (s *Server) callRootsListChangedHandler(ctx context.Context, req *RootsListChangedRequest) (Result, error) {
 	if h := s.opts.RootsListChangedHandler; h != nil {
 		h(ctx, req)
 	}
 	return nil, nil
 }
 
-func (ss *ServerSession) callProgressNotificationHandler(
-	ctx context.Context,
-	p *ProgressNotificationParams,
-) (Result, error) {
+func (ss *ServerSession) callProgressNotificationHandler(ctx context.Context, p *ProgressNotificationParams) (Result, error) {
 	if h := ss.server.opts.ProgressNotificationHandler; h != nil {
 		h(ctx, serverRequestFor(ss, p))
 	}
@@ -893,10 +821,7 @@ func (ss *ServerSession) callProgressNotificationHandler(
 // associated with this session.
 // This is typically used to report on the status of a long-running request
 // that was initiated by the client.
-func (ss *ServerSession) NotifyProgress(
-	ctx context.Context,
-	params *ProgressNotificationParams,
-) error {
+func (ss *ServerSession) NotifyProgress(ctx context.Context, params *ProgressNotificationParams) error {
 	return handleNotify(ctx, notificationProgress, newServerRequest(ss, orZero[Params](params)))
 }
 
@@ -968,34 +893,20 @@ func (ss *ServerSession) ID() string {
 
 // Ping pings the client.
 func (ss *ServerSession) Ping(ctx context.Context, params *PingParams) error {
-	_, err := handleSend[*emptyResult](
-		ctx,
-		methodPing,
-		newServerRequest(ss, orZero[Params](params)),
-	)
+	_, err := handleSend[*emptyResult](ctx, methodPing, newServerRequest(ss, orZero[Params](params)))
 	return err
 }
 
 // ListRoots lists the client roots.
-func (ss *ServerSession) ListRoots(
-	ctx context.Context,
-	params *ListRootsParams,
-) (*ListRootsResult, error) {
+func (ss *ServerSession) ListRoots(ctx context.Context, params *ListRootsParams) (*ListRootsResult, error) {
 	if err := ss.checkInitialized(methodListRoots); err != nil {
 		return nil, err
 	}
-	return handleSend[*ListRootsResult](
-		ctx,
-		methodListRoots,
-		newServerRequest(ss, orZero[Params](params)),
-	)
+	return handleSend[*ListRootsResult](ctx, methodListRoots, newServerRequest(ss, orZero[Params](params)))
 }
 
 // CreateMessage sends a sampling request to the client.
-func (ss *ServerSession) CreateMessage(
-	ctx context.Context,
-	params *CreateMessageParams,
-) (*CreateMessageResult, error) {
+func (ss *ServerSession) CreateMessage(ctx context.Context, params *CreateMessageParams) (*CreateMessageResult, error) {
 	if err := ss.checkInitialized(methodCreateMessage); err != nil {
 		return nil, err
 	}
@@ -1007,11 +918,7 @@ func (ss *ServerSession) CreateMessage(
 		p2.Messages = []*SamplingMessage{} // avoid JSON "null"
 		params = &p2
 	}
-	return handleSend[*CreateMessageResult](
-		ctx,
-		methodCreateMessage,
-		newServerRequest(ss, orZero[Params](params)),
-	)
+	return handleSend[*CreateMessageResult](ctx, methodCreateMessage, newServerRequest(ss, orZero[Params](params)))
 }
 
 // Elicit sends an elicitation request to the client asking for user input.
@@ -1019,11 +926,7 @@ func (ss *ServerSession) Elicit(ctx context.Context, params *ElicitParams) (*Eli
 	if err := ss.checkInitialized(methodElicit); err != nil {
 		return nil, err
 	}
-	return handleSend[*ElicitResult](
-		ctx,
-		methodElicit,
-		newServerRequest(ss, orZero[Params](params)),
-	)
+	return handleSend[*ElicitResult](ctx, methodElicit, newServerRequest(ss, orZero[Params](params)))
 }
 
 // Log sends a log message to the client.
@@ -1042,11 +945,7 @@ func (ss *ServerSession) Log(ctx context.Context, params *LoggingMessageParams) 
 	if compareLevels(params.Level, logLevel) < 0 {
 		return nil
 	}
-	return handleNotify(
-		ctx,
-		notificationLoggingMessage,
-		newServerRequest(ss, orZero[Params](params)),
-	)
+	return handleNotify(ctx, notificationLoggingMessage, newServerRequest(ss, orZero[Params](params)))
 }
 
 // AddSendingMiddleware wraps the current sending method handler using the provided
@@ -1085,56 +984,23 @@ func (s *Server) AddReceivingMiddleware(middleware ...Middleware) {
 // TODO(rfindley): actually load and validate the protocol schema, rather than
 // curating these method flags.
 var serverMethodInfos = map[string]methodInfo{
-	methodComplete: newServerMethodInfo(serverMethod((*Server).complete), 0),
-	methodInitialize: newServerMethodInfo(
-		serverSessionMethod((*ServerSession).initialize),
-		0,
-	),
-	methodPing: newServerMethodInfo(
-		serverSessionMethod((*ServerSession).ping),
-		missingParamsOK,
-	),
-	methodListPrompts: newServerMethodInfo(
-		serverMethod((*Server).listPrompts),
-		missingParamsOK,
-	),
-	methodGetPrompt: newServerMethodInfo(serverMethod((*Server).getPrompt), 0),
-	methodListTools: newServerMethodInfo(
-		serverMethod((*Server).listTools),
-		missingParamsOK,
-	),
-	methodCallTool: newServerMethodInfo(serverMethod((*Server).callTool), 0),
-	methodListResources: newServerMethodInfo(
-		serverMethod((*Server).listResources),
-		missingParamsOK,
-	),
-	methodListResourceTemplates: newServerMethodInfo(
-		serverMethod((*Server).listResourceTemplates),
-		missingParamsOK,
-	),
-	methodReadResource: newServerMethodInfo(serverMethod((*Server).readResource), 0),
-	methodSetLevel: newServerMethodInfo(
-		serverSessionMethod((*ServerSession).setLevel),
-		0,
-	),
-	methodSubscribe:   newServerMethodInfo(serverMethod((*Server).subscribe), 0),
-	methodUnsubscribe: newServerMethodInfo(serverMethod((*Server).unsubscribe), 0),
-	notificationCancelled: newServerMethodInfo(
-		serverSessionMethod((*ServerSession).cancel),
-		notification|missingParamsOK,
-	),
-	notificationInitialized: newServerMethodInfo(
-		serverSessionMethod((*ServerSession).initialized),
-		notification|missingParamsOK,
-	),
-	notificationRootsListChanged: newServerMethodInfo(
-		serverMethod((*Server).callRootsListChangedHandler),
-		notification|missingParamsOK,
-	),
-	notificationProgress: newServerMethodInfo(
-		serverSessionMethod((*ServerSession).callProgressNotificationHandler),
-		notification,
-	),
+	methodComplete:               newServerMethodInfo(serverMethod((*Server).complete), 0),
+	methodInitialize:             newServerMethodInfo(serverSessionMethod((*ServerSession).initialize), 0),
+	methodPing:                   newServerMethodInfo(serverSessionMethod((*ServerSession).ping), missingParamsOK),
+	methodListPrompts:            newServerMethodInfo(serverMethod((*Server).listPrompts), missingParamsOK),
+	methodGetPrompt:              newServerMethodInfo(serverMethod((*Server).getPrompt), 0),
+	methodListTools:              newServerMethodInfo(serverMethod((*Server).listTools), missingParamsOK),
+	methodCallTool:               newServerMethodInfo(serverMethod((*Server).callTool), 0),
+	methodListResources:          newServerMethodInfo(serverMethod((*Server).listResources), missingParamsOK),
+	methodListResourceTemplates:  newServerMethodInfo(serverMethod((*Server).listResourceTemplates), missingParamsOK),
+	methodReadResource:           newServerMethodInfo(serverMethod((*Server).readResource), 0),
+	methodSetLevel:               newServerMethodInfo(serverSessionMethod((*ServerSession).setLevel), 0),
+	methodSubscribe:              newServerMethodInfo(serverMethod((*Server).subscribe), 0),
+	methodUnsubscribe:            newServerMethodInfo(serverMethod((*Server).unsubscribe), 0),
+	notificationCancelled:        newServerMethodInfo(serverSessionMethod((*ServerSession).cancel), notification|missingParamsOK),
+	notificationInitialized:      newServerMethodInfo(serverSessionMethod((*ServerSession).initialized), notification|missingParamsOK),
+	notificationRootsListChanged: newServerMethodInfo(serverMethod((*Server).callRootsListChangedHandler), notification|missingParamsOK),
+	notificationProgress:         newServerMethodInfo(serverSessionMethod((*ServerSession).callProgressNotificationHandler), notification),
 }
 
 func (ss *ServerSession) sendingMethodInfos() map[string]methodInfo { return clientMethodInfos }
@@ -1191,10 +1057,7 @@ func (ss *ServerSession) handle(ctx context.Context, req *jsonrpc.Request) (any,
 
 func (ss *ServerSession) InitializeParams() *InitializeParams { return ss.state.InitializeParams }
 
-func (ss *ServerSession) initialize(
-	ctx context.Context,
-	params *InitializeParams,
-) (*InitializeResult, error) {
+func (ss *ServerSession) initialize(ctx context.Context, params *InitializeParams) (*InitializeResult, error) {
 	if params == nil {
 		return nil, fmt.Errorf("%w: \"params\" must be be provided", jsonrpc2.ErrInvalidParams)
 	}
@@ -1226,10 +1089,7 @@ func (ss *ServerSession) cancel(context.Context, *CancelledParams) (Result, erro
 	return nil, nil
 }
 
-func (ss *ServerSession) setLevel(
-	_ context.Context,
-	params *SetLoggingLevelParams,
-) (*emptyResult, error) {
+func (ss *ServerSession) setLevel(_ context.Context, params *SetLoggingLevelParams) (*emptyResult, error) {
 	ss.updateState(func(state *ServerSessionState) {
 		state.LogLevel = params.Level
 	})
@@ -1305,13 +1165,7 @@ func decodeCursor(cursor string) (*pageToken, error) {
 // from a featureSet. It populates the provided result res with the items
 // and sets its next cursor for subsequent pages.
 // If there are no more pages, the next cursor within the result will be an empty string.
-func paginateList[P listParams, R listResult[T], T any](
-	fs *featureSet[T],
-	pageSize int,
-	params P,
-	res R,
-	setFunc func(R, []T),
-) (R, error) {
+func paginateList[P listParams, R listResult[T], T any](fs *featureSet[T], pageSize int, params P, res R, setFunc func(R, []T)) (R, error) {
 	var seq iter.Seq[T]
 	if params.cursorPtr() == nil || *params.cursorPtr() == "" {
 		seq = fs.all()

@@ -74,51 +74,39 @@ once a reviewer has approved your pull request.
 
 A squash can be performed as follows. Let's say you have the following commits:
 
-```git
     initial commit
     second commit
     final commit
-```
 
 Run the command below with the number set to the total commits you wish to
 squash (in our case 3 commits):
 
-```git
     git rebase -i HEAD~3
-```
 
 You default text editor will then open up and you will see the following::
 
-```git
     pick eb36612 initial commit
     pick 9ac8968 second commit
     pick a760569 final commit
 
     # Rebase eb1429f..a760569 onto eb1429f (3 commands)
-```
 
 We want to rebase on top of our first commit, so we change the other two commits
 to `squash`:
 
-```git
     pick eb36612 initial commit
     squash 9ac8968 second commit
     squash a760569 final commit
-```
 
 After this, should you wish to update your commit message to better summarise
 all of your pull request, run:
 
-```git
     git commit --amend
-```
 
 You will then need to force push (assuming your initial commit(s) were posted
 to github):
 
-```git
     git push origin your-branch --force
-```
 
 Alternatively, a core member can squash your commits within Github.
 
@@ -131,3 +119,4 @@ Origin](https://git-scm.com/docs/git-commit#Documentation/git-commit.txt---signo
 
 Rekor adheres to and enforces the [Contributor Covenant](http://contributor-covenant.org/version/1/4/) Code of Conduct.
 Please take a moment to read the [CODE_OF_CONDUCT.md](https://github.com/sigstore/rekor/blob/master/CODE_OF_CONDUCT.md) document.
+

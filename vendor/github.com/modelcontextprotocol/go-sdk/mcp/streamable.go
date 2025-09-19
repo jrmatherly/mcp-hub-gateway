@@ -81,10 +81,7 @@ type StreamableHTTPOptions struct {
 // The getServer function is used to create or look up servers for new
 // sessions. It is OK for getServer to return the same server multiple times.
 // If getServer returns nil, a 400 Bad Request will be served.
-func NewStreamableHTTPHandler(
-	getServer func(*http.Request) *Server,
-	opts *StreamableHTTPOptions,
-) *StreamableHTTPHandler {
+func NewStreamableHTTPHandler(getServer func(*http.Request) *Server, opts *StreamableHTTPOptions) *StreamableHTTPHandler {
 	h := &StreamableHTTPHandler{
 		getServer:  getServer,
 		transports: make(map[string]*StreamableServerTransport),
@@ -133,11 +130,7 @@ func (h *StreamableHTTPHandler) ServeHTTP(w http.ResponseWriter, req *http.Reque
 
 	if req.Method == http.MethodGet {
 		if !streamOK {
-			http.Error(
-				w,
-				"Accept must contain 'text/event-stream' for GET requests",
-				http.StatusBadRequest,
-			)
+			http.Error(w, "Accept must contain 'text/event-stream' for GET requests", http.StatusBadRequest)
 			return
 		}
 	} else if (!jsonOK || !streamOK) && req.Method != http.MethodDelete { // TODO: consolidate with handling of http method below.
@@ -163,11 +156,7 @@ func (h *StreamableHTTPHandler) ServeHTTP(w http.ResponseWriter, req *http.Reque
 
 	if req.Method == http.MethodDelete {
 		if sessionID == "" {
-			http.Error(
-				w,
-				"Bad Request: DELETE requires an Mcp-Session-Id header",
-				http.StatusBadRequest,
-			)
+			http.Error(w, "Bad Request: DELETE requires an Mcp-Session-Id header", http.StatusBadRequest)
 			return
 		}
 		if transport != nil { // transport may be nil in stateless mode
@@ -188,11 +177,7 @@ func (h *StreamableHTTPHandler) ServeHTTP(w http.ResponseWriter, req *http.Reque
 		}
 	default:
 		w.Header().Set("Allow", "GET, POST, DELETE")
-		http.Error(
-			w,
-			"Method Not Allowed: streamable MCP servers support GET, POST, and DELETE requests",
-			http.StatusMethodNotAllowed,
-		)
+		http.Error(w, "Method Not Allowed: streamable MCP servers support GET, POST, and DELETE requests", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -229,14 +214,7 @@ func (h *StreamableHTTPHandler) ServeHTTP(w http.ResponseWriter, req *http.Reque
 		protocolVersion = protocolVersion20250326
 	}
 	if !slices.Contains(supportedProtocolVersions, protocolVersion) {
-		http.Error(
-			w,
-			fmt.Sprintf(
-				"Bad Request: Unsupported protocol version (supported versions: %s)",
-				strings.Join(supportedProtocolVersions, ","),
-			),
-			http.StatusBadRequest,
-		)
+		http.Error(w, fmt.Sprintf("Bad Request: Unsupported protocol version (supported versions: %s)", strings.Join(supportedProtocolVersions, ",")), http.StatusBadRequest)
 		return
 	}
 
@@ -514,11 +492,7 @@ type stream struct {
 	requests map[jsonrpc.ID]struct{}
 }
 
-func (c *streamableServerConn) newStream(
-	ctx context.Context,
-	id StreamID,
-	isInitialize, jsonResponse bool,
-) (*stream, error) {
+func (c *streamableServerConn) newStream(ctx context.Context, id StreamID, isInitialize, jsonResponse bool) (*stream, error) {
 	if err := c.eventStore.Open(ctx, c.sessionID, id); err != nil {
 		return nil, err
 	}
@@ -652,15 +626,7 @@ func (c *streamableServerConn) servePOST(w http.ResponseWriter, req *http.Reques
 	}
 
 	if isBatch && protocolVersion >= protocolVersion20250618 {
-		http.Error(
-			w,
-			fmt.Sprintf(
-				"JSON-RPC batching is not supported in %s and later (request version: %s)",
-				protocolVersion20250618,
-				protocolVersion,
-			),
-			http.StatusBadRequest,
-		)
+		http.Error(w, fmt.Sprintf("JSON-RPC batching is not supported in %s and later (request version: %s)", protocolVersion20250618, protocolVersion), http.StatusBadRequest)
 		return
 	}
 
@@ -728,11 +694,7 @@ func (c *streamableServerConn) servePOST(w http.ResponseWriter, req *http.Reques
 	}
 }
 
-func (c *streamableServerConn) respondJSON(
-	stream *stream,
-	w http.ResponseWriter,
-	req *http.Request,
-) {
+func (c *streamableServerConn) respondJSON(stream *stream, w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Cache-Control", "no-cache, no-transform")
 	w.Header().Set("Content-Type", "application/json")
 	if c.sessionID != "" && stream.isInitialize {
@@ -769,13 +731,7 @@ func (c *streamableServerConn) respondJSON(
 }
 
 // lastIndex is the index of the last seen event if resuming, else -1.
-func (c *streamableServerConn) respondSSE(
-	stream *stream,
-	w http.ResponseWriter,
-	req *http.Request,
-	lastIndex int,
-	persistent bool,
-) {
+func (c *streamableServerConn) respondSSE(stream *stream, w http.ResponseWriter, req *http.Request, lastIndex int, persistent bool) {
 	// Accept was checked in [StreamableHTTPHandler]
 	w.Header().Set("Cache-Control", "no-cache, no-transform")
 	w.Header().Set("Content-Type", "text/event-stream") // Accept checked in [StreamableHTTPHandler]
@@ -824,11 +780,7 @@ func (c *streamableServerConn) respondSSE(
 				//
 				// TODO: This may not matter in practice, in which case we should
 				// simplify.
-				http.Error(
-					w,
-					http.StatusText(http.StatusInternalServerError),
-					http.StatusInternalServerError,
-				)
+				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			} else {
 				// TODO(#170): log when we add server-side logging
 			}
@@ -853,12 +805,7 @@ func (c *streamableServerConn) respondSSE(
 // If the stream did not terminate normally, it is either because ctx was
 // cancelled, or the connection is closed: check the ctx.Err() to differentiate
 // these cases.
-func (c *streamableServerConn) messages(
-	ctx context.Context,
-	stream *stream,
-	persistent bool,
-	lastIndex int,
-) iter.Seq2[json.RawMessage, error] {
+func (c *streamableServerConn) messages(ctx context.Context, stream *stream, persistent bool, lastIndex int) iter.Seq2[json.RawMessage, error] {
 	return func(yield func(json.RawMessage, error) bool) {
 		for {
 			c.mu.Lock()
@@ -894,6 +841,7 @@ func (c *streamableServerConn) messages(
 				return
 			}
 		}
+
 	}
 }
 
@@ -942,8 +890,7 @@ func (c *streamableServerConn) Read(ctx context.Context) (jsonrpc.Message, error
 
 // Write implements the [Connection] interface.
 func (c *streamableServerConn) Write(ctx context.Context, msg jsonrpc.Message) error {
-	if req, ok := msg.(*jsonrpc.Request); ok && req.ID.IsValid() &&
-		(c.stateless || c.sessionID == "") {
+	if req, ok := msg.(*jsonrpc.Request); ok && req.ID.IsValid() && (c.stateless || c.sessionID == "") {
 		// Requests aren't possible with stateless servers, or when there's no session ID.
 		return fmt.Errorf("%w: stateless servers cannot make requests", jsonrpc2.ErrRejected)
 	}
@@ -1333,12 +1280,7 @@ func (c *streamableClientConn) handleJSON(requestSummary string, resp *http.Resp
 //
 // If forReq is set, it is the request that initiated the stream, and the
 // stream is complete when we receive its response.
-func (c *streamableClientConn) handleSSE(
-	requestSummary string,
-	initialResp *http.Response,
-	persistent bool,
-	forReq *jsonrpc2.Request,
-) {
+func (c *streamableClientConn) handleSSE(requestSummary string, initialResp *http.Response, persistent bool, forReq *jsonrpc2.Request) {
 	resp := initialResp
 	var lastEventID string
 	for {
@@ -1377,13 +1319,7 @@ func (c *streamableClientConn) handleSSE(
 		}
 		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 			resp.Body.Close()
-			c.fail(
-				fmt.Errorf(
-					"%s: failed to reconnect: %v",
-					requestSummary,
-					http.StatusText(resp.StatusCode),
-				),
-			)
+			c.fail(fmt.Errorf("%s: failed to reconnect: %v", requestSummary, http.StatusText(resp.StatusCode)))
 			return
 		}
 		// Reconnection was successful. Continue the loop with the new response.
@@ -1394,11 +1330,7 @@ func (c *streamableClientConn) handleSSE(
 // incoming channel. It returns the ID of the last processed event and a flag
 // indicating if the connection was closed by the client. If resp is nil, it
 // returns "", false.
-func (c *streamableClientConn) processStream(
-	requestSummary string,
-	resp *http.Response,
-	forReq *jsonrpc.Request,
-) (lastEventID string, clientClosed bool) {
+func (c *streamableClientConn) processStream(requestSummary string, resp *http.Response, forReq *jsonrpc.Request) (lastEventID string, clientClosed bool) {
 	defer resp.Body.Close()
 	for evt, err := range scanEvents(resp.Body) {
 		if err != nil {
@@ -1515,9 +1447,7 @@ func calculateReconnectDelay(attempt int) time.Duration {
 		return 0
 	}
 	// Calculate the exponential backoff using the grow factor.
-	backoffDuration := time.Duration(
-		float64(reconnectInitialDelay) * math.Pow(reconnectGrowFactor, float64(attempt-1)),
-	)
+	backoffDuration := time.Duration(float64(reconnectInitialDelay) * math.Pow(reconnectGrowFactor, float64(attempt-1)))
 	// Cap the backoffDuration at maxDelay.
 	backoffDuration = min(backoffDuration, reconnectMaxDelay)
 

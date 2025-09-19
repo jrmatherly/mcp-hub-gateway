@@ -60,10 +60,7 @@ func TokenInfoFromContext(ctx context.Context) *TokenInfo {
 
 //
 // [protected resource metadata]: https://datatracker.ietf.org/doc/rfc9728
-func RequireBearerToken(
-	verifier TokenVerifier,
-	opts *RequireBearerTokenOptions,
-) func(http.Handler) http.Handler {
+func RequireBearerToken(verifier TokenVerifier, opts *RequireBearerTokenOptions) func(http.Handler) http.Handler {
 	// Based on typescript-sdk/src/server/auth/middleware/bearerAuth.ts.
 
 	return func(handler http.Handler) http.Handler {
@@ -72,8 +69,7 @@ func RequireBearerToken(
 			if code != 0 {
 				if code == http.StatusUnauthorized || code == http.StatusForbidden {
 					if opts != nil && opts.ResourceMetadataURL != "" {
-						w.Header().
-							Add("WWW-Authenticate", "Bearer resource_metadata="+opts.ResourceMetadataURL)
+						w.Header().Add("WWW-Authenticate", "Bearer resource_metadata="+opts.ResourceMetadataURL)
 					}
 				}
 				http.Error(w, errmsg, code)
@@ -85,11 +81,7 @@ func RequireBearerToken(
 	}
 }
 
-func verify(
-	req *http.Request,
-	verifier TokenVerifier,
-	opts *RequireBearerTokenOptions,
-) (_ *TokenInfo, errmsg string, code int) {
+func verify(req *http.Request, verifier TokenVerifier, opts *RequireBearerTokenOptions) (_ *TokenInfo, errmsg string, code int) {
 	// Extract bearer token.
 	authHeader := req.Header.Get("Authorization")
 	fields := strings.Fields(authHeader)

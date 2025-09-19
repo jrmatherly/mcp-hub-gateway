@@ -156,8 +156,7 @@ func (c *Connection) updateInFlight(f func(*inFlightState)) {
 // If idle returns true, the readIncoming goroutine may still be running,
 // but no other goroutines are doing work on behalf of the connection.
 func (s *inFlightState) idle() bool {
-	return len(s.outgoingCalls) == 0 && s.outgoingNotifications == 0 && s.incoming == 0 &&
-		!s.handlerRunning
+	return len(s.outgoingCalls) == 0 && s.outgoingNotifications == 0 && s.incoming == 0 && !s.handlerRunning
 }
 
 // shuttingDown reports whether the connection is in a state that should
@@ -230,12 +229,7 @@ func NewConnection(ctx context.Context, cfg ConnectionConfig) *Connection {
 // The connection is closed automatically (and its resources cleaned up) when
 // the last request has completed after the underlying ReadWriteCloser breaks,
 // but it may be stopped earlier by calling Close (for a clean shutdown).
-func bindConnection(
-	bindCtx context.Context,
-	rwc io.ReadWriteCloser,
-	binder Binder,
-	onDone func(),
-) *Connection {
+func bindConnection(bindCtx context.Context, rwc io.ReadWriteCloser, binder Binder, onDone func()) *Connection {
 	// TODO: Should we create a new event span here?
 	// This will propagate cancellation from ctx; should it?
 	ctx := notDone{bindCtx}
@@ -715,23 +709,13 @@ func (c *Connection) processResult(from any, req *incomingRequest, result any, e
 	}
 
 	if result != nil && err != nil {
-		c.internalErrorf(
-			"%#v returned a non-nil result with a non-nil error for %s:\n%v\n%#v",
-			from,
-			req.Method,
-			err,
-			result,
-		)
+		c.internalErrorf("%#v returned a non-nil result with a non-nil error for %s:\n%v\n%#v", from, req.Method, err, result)
 		result = nil // Discard the spurious result and respond with err.
 	}
 
 	if req.IsCall() {
 		if result == nil && err == nil {
-			err = c.internalErrorf(
-				"%#v returned a nil result and nil error for a %q Request that requires a Response",
-				from,
-				req.Method,
-			)
+			err = c.internalErrorf("%#v returned a nil result and nil error for a %q Request that requires a Response", from, req.Method)
 		}
 
 		response, respErr := NewResponse(req.ID, result, err)

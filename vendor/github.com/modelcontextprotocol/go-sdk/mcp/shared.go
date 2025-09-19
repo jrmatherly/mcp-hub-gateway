@@ -86,11 +86,7 @@ func addMiddleware(handlerp *MethodHandler, middleware []Middleware) {
 	}
 }
 
-func defaultSendingMethodHandler[S Session](
-	ctx context.Context,
-	method string,
-	req Request,
-) (Result, error) {
+func defaultSendingMethodHandler[S Session](ctx context.Context, method string, req Request) (Result, error) {
 	info, ok := req.GetSession().sendingMethodInfos()[method]
 	if !ok {
 		// This can be called from user code, with an arbitrary value for method.
@@ -136,11 +132,7 @@ func handleSend[R Result](ctx context.Context, method string, req Request) (R, e
 }
 
 // defaultReceivingMethodHandler is the initial MethodHandler for servers and clients, before being wrapped by middleware.
-func defaultReceivingMethodHandler[S Session](
-	ctx context.Context,
-	method string,
-	req Request,
-) (Result, error) {
+func defaultReceivingMethodHandler[S Session](ctx context.Context, method string, req Request) (Result, error) {
 	info, ok := req.GetSession().receivingMethodInfos()[method]
 	if !ok {
 		// This can be called from user code, with an arbitrary value for method.
@@ -149,11 +141,7 @@ func defaultReceivingMethodHandler[S Session](
 	return info.handleMethod(ctx, method, req)
 }
 
-func handleReceive[S Session](
-	ctx context.Context,
-	session S,
-	jreq *jsonrpc.Request,
-) (Result, error) {
+func handleReceive[S Session](ctx context.Context, session S, jreq *jsonrpc.Request) (Result, error) {
 	info, err := checkRequest(jreq, session.receivingMethodInfos())
 	if err != nil {
 		return nil, err
@@ -188,18 +176,10 @@ func checkRequest(req *jsonrpc.Request, infos map[string]methodInfo) (methodInfo
 		return methodInfo{}, fmt.Errorf("%w: %q unsupported", jsonrpc2.ErrNotHandled, req.Method)
 	}
 	if info.flags&notification != 0 && req.IsCall() {
-		return methodInfo{}, fmt.Errorf(
-			"%w: unexpected id for %q",
-			jsonrpc2.ErrInvalidRequest,
-			req.Method,
-		)
+		return methodInfo{}, fmt.Errorf("%w: unexpected id for %q", jsonrpc2.ErrInvalidRequest, req.Method)
 	}
 	if info.flags&notification == 0 && !req.IsCall() {
-		return methodInfo{}, fmt.Errorf(
-			"%w: missing id for %q",
-			jsonrpc2.ErrInvalidRequest,
-			req.Method,
-		)
+		return methodInfo{}, fmt.Errorf("%w: missing id for %q", jsonrpc2.ErrInvalidRequest, req.Method)
 	}
 	// missingParamsOK is checked here to catch the common case where "params" is
 	// missing entirely.
@@ -207,10 +187,7 @@ func checkRequest(req *jsonrpc.Request, infos map[string]methodInfo) (methodInfo
 	// However, it's checked again after unmarshalling to catch the rare but
 	// possible case where "params" is JSON null (see https://go.dev/issue/33835).
 	if info.flags&missingParamsOK == 0 && len(req.Params) == 0 {
-		return methodInfo{}, fmt.Errorf(
-			"%w: missing required \"params\"",
-			jsonrpc2.ErrInvalidRequest,
-		)
+		return methodInfo{}, fmt.Errorf("%w: missing required \"params\"", jsonrpc2.ErrInvalidRequest)
 	}
 	return info, nil
 }
@@ -256,10 +233,7 @@ const (
 	missingParamsOK                         // params may be missing or null
 )
 
-func newClientMethodInfo[P paramsPtr[T], R Result, T any](
-	d typedClientMethodHandler[P, R],
-	flags methodFlags,
-) methodInfo {
+func newClientMethodInfo[P paramsPtr[T], R Result, T any](d typedClientMethodHandler[P, R], flags methodFlags) methodInfo {
 	mi := newMethodInfo[P, R](flags)
 	mi.newRequest = func(s Session, p Params, _ *RequestExtra) Request {
 		r := &ClientRequest[P]{Session: s.(*ClientSession)}
@@ -268,18 +242,13 @@ func newClientMethodInfo[P paramsPtr[T], R Result, T any](
 		}
 		return r
 	}
-	mi.handleMethod = MethodHandler(
-		func(ctx context.Context, _ string, req Request) (Result, error) {
-			return d(ctx, req.(*ClientRequest[P]))
-		},
-	)
+	mi.handleMethod = MethodHandler(func(ctx context.Context, _ string, req Request) (Result, error) {
+		return d(ctx, req.(*ClientRequest[P]))
+	})
 	return mi
 }
 
-func newServerMethodInfo[P paramsPtr[T], R Result, T any](
-	d typedServerMethodHandler[P, R],
-	flags methodFlags,
-) methodInfo {
+func newServerMethodInfo[P paramsPtr[T], R Result, T any](d typedServerMethodHandler[P, R], flags methodFlags) methodInfo {
 	mi := newMethodInfo[P, R](flags)
 	mi.newRequest = func(s Session, p Params, re *RequestExtra) Request {
 		r := &ServerRequest[P]{Session: s.(*ServerSession), Extra: re}
@@ -288,11 +257,9 @@ func newServerMethodInfo[P paramsPtr[T], R Result, T any](
 		}
 		return r
 	}
-	mi.handleMethod = MethodHandler(
-		func(ctx context.Context, _ string, req Request) (Result, error) {
-			return d(ctx, req.(*ServerRequest[P]))
-		},
-	)
+	mi.handleMethod = MethodHandler(func(ctx context.Context, _ string, req Request) (Result, error) {
+		return d(ctx, req.(*ServerRequest[P]))
+	})
 	return mi
 }
 
@@ -318,10 +285,7 @@ func newMethodInfo[P paramsPtr[T], R Result, T any](flags methodFlags) methodInf
 			// internal code or externally provided handlers may assume that params
 			// is non-null.
 			if flags&missingParamsOK == 0 && p == nil {
-				return nil, fmt.Errorf(
-					"%w: missing required \"params\"",
-					jsonrpc2.ErrInvalidRequest,
-				)
+				return nil, fmt.Errorf("%w: missing required \"params\"", jsonrpc2.ErrInvalidRequest)
 			}
 			return orZero[Params](p), nil
 		},
@@ -352,18 +316,14 @@ func clientMethod[P Params, R Result](
 }
 
 // serverSessionMethod is glue for creating a typedServerMethodHandler from a method on ServerSession.
-func serverSessionMethod[P Params, R Result](
-	f func(*ServerSession, context.Context, P) (R, error),
-) typedServerMethodHandler[P, R] {
+func serverSessionMethod[P Params, R Result](f func(*ServerSession, context.Context, P) (R, error)) typedServerMethodHandler[P, R] {
 	return func(ctx context.Context, req *ServerRequest[P]) (R, error) {
 		return f(req.GetSession().(*ServerSession), ctx, req.Params)
 	}
 }
 
 // clientSessionMethod is glue for creating a typedMethodHandler from a method on ServerSession.
-func clientSessionMethod[P Params, R Result](
-	f func(*ClientSession, context.Context, P) (R, error),
-) typedClientMethodHandler[P, R] {
+func clientSessionMethod[P Params, R Result](f func(*ClientSession, context.Context, P) (R, error)) typedClientMethodHandler[P, R] {
 	return func(ctx context.Context, req *ClientRequest[P]) (R, error) {
 		return f(req.GetSession().(*ClientSession), ctx, req.Params)
 	}
@@ -553,11 +513,7 @@ type keepaliveSession interface {
 // startKeepalive starts the keepalive mechanism for a session.
 // It assigns the cancel function to the provided cancelPtr and starts a goroutine
 // that sends ping messages at the specified interval.
-func startKeepalive(
-	session keepaliveSession,
-	interval time.Duration,
-	cancelPtr *context.CancelFunc,
-) {
+func startKeepalive(session keepaliveSession, interval time.Duration, cancelPtr *context.CancelFunc) {
 	ctx, cancel := context.WithCancel(context.Background())
 	// Assign cancel function before starting goroutine to avoid race condition.
 	// We cannot return it because the caller may need to cancel during the

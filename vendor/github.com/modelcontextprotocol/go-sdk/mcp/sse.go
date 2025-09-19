@@ -441,12 +441,7 @@ func (c *sseClientConn) Write(ctx context.Context, msg jsonrpc.Message) error {
 	if c.isDone() {
 		return io.EOF
 	}
-	req, err := http.NewRequestWithContext(
-		ctx,
-		"POST",
-		c.msgEndpoint.String(),
-		bytes.NewReader(data),
-	)
+	req, err := http.NewRequestWithContext(ctx, "POST", c.msgEndpoint.String(), bytes.NewReader(data))
 	if err != nil {
 		return err
 	}

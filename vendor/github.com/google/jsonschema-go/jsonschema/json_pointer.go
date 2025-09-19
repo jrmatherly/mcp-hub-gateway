@@ -108,11 +108,7 @@ func dereferenceJSONPointer(s *Schema, sptr string) (_ *Schema, err error) {
 				return nil, fmt.Errorf("invalid int: %q", seg)
 			}
 			if n < 0 || n >= v.Len() {
-				return nil, fmt.Errorf(
-					"index %d is out of bounds for array of length %d",
-					n,
-					v.Len(),
-				)
+				return nil, fmt.Errorf("index %d is out of bounds for array of length %d", n, v.Len())
 			}
 			v = v.Index(n)
 			// Cannot be invalid.
