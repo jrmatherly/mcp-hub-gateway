@@ -716,6 +716,23 @@ func (g *Gateway) createMcpConfigSetTool(
 	}
 }
 
+// createDynamicMcpTools aggregates all dynamic MCP management tools
+func (g *Gateway) createDynamicMcpTools(
+	configuration Configuration,
+	clientConfig *clientConfig,
+) []ToolRegistration {
+	var tools []ToolRegistration
+
+	// Add all dynamic MCP management tools
+	tools = append(tools, *g.createMcpFindTool(configuration))
+	tools = append(tools, *g.createMcpAddTool(configuration, clientConfig))
+	tools = append(tools, *g.createMcpRemoveTool(configuration, clientConfig))
+	tools = append(tools, *g.createMcpOfficialRegistryImportTool(configuration, clientConfig))
+	tools = append(tools, *g.createMcpConfigSetTool(configuration, clientConfig))
+
+	return tools
+}
+
 // maxInt returns the maximum of two integers
 func maxInt(a, b int) int {
 	if a > b {

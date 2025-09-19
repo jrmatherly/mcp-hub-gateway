@@ -1,4 +1,4 @@
-// Copyright 2025 The Go MCP SDK Authors. All rights reserved.
+// Copyright 2025 The JSON Schema Go Project Authors. All rights reserved.
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
@@ -108,7 +108,11 @@ func dereferenceJSONPointer(s *Schema, sptr string) (_ *Schema, err error) {
 				return nil, fmt.Errorf("invalid int: %q", seg)
 			}
 			if n < 0 || n >= v.Len() {
-				return nil, fmt.Errorf("index %d is out of bounds for array of length %d", n, v.Len())
+				return nil, fmt.Errorf(
+					"index %d is out of bounds for array of length %d",
+					n,
+					v.Len(),
+				)
 			}
 			v = v.Index(n)
 			// Cannot be invalid.

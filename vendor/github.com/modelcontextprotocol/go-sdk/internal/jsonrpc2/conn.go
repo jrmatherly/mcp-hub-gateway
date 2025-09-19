@@ -156,7 +156,8 @@ func (c *Connection) updateInFlight(f func(*inFlightState)) {
 // If idle returns true, the readIncoming goroutine may still be running,
 // but no other goroutines are doing work on behalf of the connection.
 func (s *inFlightState) idle() bool {
-	return len(s.outgoingCalls) == 0 && s.outgoingNotifications == 0 && s.incoming == 0 && !s.handlerRunning
+	return len(s.outgoingCalls) == 0 && s.outgoingNotifications == 0 && s.incoming == 0 &&
+		!s.handlerRunning
 }
 
 // shuttingDown reports whether the connection is in a state that should
@@ -229,7 +230,12 @@ func NewConnection(ctx context.Context, cfg ConnectionConfig) *Connection {
 // The connection is closed automatically (and its resources cleaned up) when
 // the last request has completed after the underlying ReadWriteCloser breaks,
 // but it may be stopped earlier by calling Close (for a clean shutdown).
-func bindConnection(bindCtx context.Context, rwc io.ReadWriteCloser, binder Binder, onDone func()) *Connection {
+func bindConnection(
+	bindCtx context.Context,
+	rwc io.ReadWriteCloser,
+	binder Binder,
+	onDone func(),
+) *Connection {
 	// TODO: Should we create a new event span here?
 	// This will propagate cancellation from ctx; should it?
 	ctx := notDone{bindCtx}
@@ -483,10 +489,32 @@ func (c *Connection) Cancel(id ID) {
 
 // Wait blocks until the connection is fully closed, but does not close it.
 func (c *Connection) Wait() error {
+	return c.wait(true)
+}
+
+// wait for the connection to close, and aggregates the most cause of its
+// termination, if abnormal.
+//
+// The fromWait argument allows this logic to be shared with Close, where we
+// only want to expose the closeErr.
+//
+// (Previously, Wait also only returned the closeErr, which was misleading if
+// the connection was broken for another reason).
+func (c *Connection) wait(fromWait bool) error {
 	var err error
 	<-c.done
 	c.updateInFlight(func(s *inFlightState) {
-		err = s.closeErr
+		if fromWait {
+			if !errors.Is(s.readErr, io.EOF) {
+				err = s.readErr
+			}
+			if err == nil && !errors.Is(s.writeErr, io.EOF) {
+				err = s.writeErr
+			}
+		}
+		if err == nil {
+			err = s.closeErr
+		}
 	})
 	return err
 }
@@ -502,8 +530,7 @@ func (c *Connection) Close() error {
 	// Stop handling new requests, and interrupt the reader (by closing the
 	// connection) as soon as the active requests finish.
 	c.updateInFlight(func(s *inFlightState) { s.connClosing = true })
-
-	return c.Wait()
+	return c.wait(false)
 }
 
 // readIncoming collects inbound messages from the reader and delivers them, either responding
@@ -688,13 +715,23 @@ func (c *Connection) processResult(from any, req *incomingRequest, result any, e
 	}
 
 	if result != nil && err != nil {
-		c.internalErrorf("%#v returned a non-nil result with a non-nil error for %s:\n%v\n%#v", from, req.Method, err, result)
+		c.internalErrorf(
+			"%#v returned a non-nil result with a non-nil error for %s:\n%v\n%#v",
+			from,
+			req.Method,
+			err,
+			result,
+		)
 		result = nil // Discard the spurious result and respond with err.
 	}
 
 	if req.IsCall() {
 		if result == nil && err == nil {
-			err = c.internalErrorf("%#v returned a nil result and nil error for a %q Request that requires a Response", from, req.Method)
+			err = c.internalErrorf(
+				"%#v returned a nil result and nil error for a %q Request that requires a Response",
+				from,
+				req.Method,
+			)
 		}
 
 		response, respErr := NewResponse(req.ID, result, err)

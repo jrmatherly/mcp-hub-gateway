@@ -1,0 +1,15 @@
+# Ignore vendor directory - third-party code we don't control
+vendor/
+
+# Ignore node_modules
+node_modules/
+
+# Ignore build outputs
+dist/
+build/
+.next/
+
+# Ignore temporary directories
+TEMP_DEL/
+temp/
+tmp/

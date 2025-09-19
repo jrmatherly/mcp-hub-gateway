@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"time"
@@ -40,7 +41,20 @@ func inferServerType(serverConfig *catalog.ServerConfig) string {
 
 func (g *Gateway) mcpToolHandler(tool catalog.Tool) mcp.ToolHandler {
 	return func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		return g.clientPool.runToolContainer(ctx, tool, req.Params)
+		// Convert CallToolParamsRaw to CallToolParams
+		params := &mcp.CallToolParams{
+			Meta: req.Params.Meta,
+			Name: req.Params.Name,
+		}
+		// Unmarshal the raw arguments if present
+		if req.Params.Arguments != nil && len(req.Params.Arguments) > 0 {
+			var args any
+			if err := json.Unmarshal(req.Params.Arguments, &args); err != nil {
+				return nil, fmt.Errorf("failed to unmarshal arguments: %w", err)
+			}
+			params.Arguments = args
+		}
+		return g.clientPool.runToolContainer(ctx, tool, params)
 	}
 }
 
@@ -116,8 +130,24 @@ func (g *Gateway) mcpServerToolHandler(
 		}
 		defer g.clientPool.ReleaseClient(client)
 
+		// Convert CallToolParamsRaw to CallToolParams
+		params := &mcp.CallToolParams{
+			Meta: req.Params.Meta,
+			Name: req.Params.Name,
+		}
+		// Unmarshal the raw arguments if present
+		if req.Params.Arguments != nil && len(req.Params.Arguments) > 0 {
+			var args any
+			if err := json.Unmarshal(req.Params.Arguments, &args); err != nil {
+				telemetry.RecordToolError(ctx, span, serverConfig.Name, serverType, req.Params.Name)
+				span.SetStatus(codes.Error, "Failed to unmarshal arguments")
+				return nil, fmt.Errorf("failed to unmarshal arguments: %w", err)
+			}
+			params.Arguments = args
+		}
+
 		// Execute the tool call
-		result, err := client.Session().CallTool(ctx, req.Params)
+		result, err := client.Session().CallTool(ctx, params)
 
 		// Record duration
 		duration := time.Since(startTime).Milliseconds()

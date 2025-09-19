@@ -49,3 +49,6 @@ TEMP_DEL/**/.env*
 TEMP_DEL/.env*
 TEMP_DEL/
 code-errors.txt
+
+# Docker CLI plugin binary
+docker-mcp

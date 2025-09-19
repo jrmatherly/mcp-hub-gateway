@@ -9,11 +9,11 @@ This repository contains **two projects**:
 1. **🔧 MCP CLI Plugin & Gateway** - Docker CLI plugin for MCP server management
 2. **🌐 MCP Portal** - Web interface with Azure AD auth and multi-user support
 
-**Current Status**: Portal is ~80% complete (Phases 1-3 done, Phase 4 at 60% blocked, Phase 5 at 80% implemented but untested)
+**Current Status**: Portal is ~65% complete (Phases 1-3 done, Phase 4 at 60% needs testing, Phase 5 at 80% implemented)
 
-**Recent Updates (2025-09-19)**: Major OAuth implementation completed with Azure AD integration, but build system issues blocking validation
+**Recent Updates (2025-09-19)**: Successfully upgraded to MCP SDK v0.5.0 and implemented 5 dynamic MCP management tools. Gateway now provides 75 tools total.
 
-**Critical Issue**: Build system blocked by Go module vendor dependencies and test compilation failures
+**Current Priority**: Test coverage expansion from 11% to 50%+ for production readiness
 
 ## Prerequisites
 
@@ -111,13 +111,10 @@ echo "Use this JWT secret: $JWT_SECRET"
 # Copy this value to JWT_SECRET in your .env file
 ```
 
-### 2. Production Deployment with Docker (Currently Blocked)
+### 2. Production Deployment with Docker
 
 ```bash
-# ⚠️ WARNING: Build system issues prevent deployment
-# The following commands exist but may fail due to dependency issues
-
-# Deployment script exists but build may fail
+# Deploy the portal using the Docker solution
 ./deploy-mcp-portal.sh
 
 # Or manually with docker-compose (build issues likely)
@@ -130,18 +127,18 @@ docker-compose -f docker-compose.mcp-portal.yml ps
 docker-compose -f docker-compose.mcp-portal.yml logs -f
 ```
 
-**⚠️ Known Issues (September 2025)**:
+**✅ Build System Fixed (September 2025)**:
 
-- Go module vendor dependencies failing to resolve
-- Test compilation errors preventing builds
-- 8 uncommitted files in portal/features/ directory
-- Frontend build system issues with Next.js imports
+- MCP SDK v0.5.0 upgrade complete
+- Dynamic tools implementation working
+- Vendor dependencies resolved
+- Gateway running with 75 tools total
 
-**Before attempting deployment, resolve**:
+**Next Steps**:
 
-1. Run `go mod tidy` and fix vendor dependencies
-2. Review/commit uncommitted work in portal/features/
-3. Fix test compilation issues
+1. Expand test coverage to 50%+
+2. Complete OAuth testing
+3. Final production hardening
 
 Services will be available at:
 
@@ -430,42 +427,42 @@ docker-compose exec redis redis-cli ping
 
 ## 🧪 Testing
 
-### ⚠️ Testing Currently Blocked
+### 🧪 Testing
 
-**Critical Issue**: Test compilation failures prevent any testing from running. The build system must be fixed before tests can execute.
+**Current Status**: Test coverage at 11%, needs expansion to 50%+ for production
 
-### CLI Testing (When Build Fixed)
+### CLI Testing
 
 ```bash
-# Currently FAILING due to compilation issues
+# Run unit tests
 make test
 
-# Will fail with compilation errors
+# Test specific component
 go test ./cmd/docker-mcp/server/
 
-# Integration tests also blocked
+# Run integration tests
 make integration
 
-# Coverage measurement unavailable
+# Check coverage (current: 11%, target: 50%+)
 go test -cover ./...
 ```
 
-### Portal Testing (When Build Fixed)
+### Portal Testing
 
 ```bash
-# Currently BLOCKED by build issues
+# Run all portal tests
 make portal-test
 
-# Backend unit tests fail to compile
+# Backend unit tests
 go test ./cmd/docker-mcp/portal/...
 
-# Frontend tests may work independently
+# Frontend tests
 cd cmd/docker-mcp/portal/frontend
 npm run test
 npm run test:coverage
 ```
 
-**Priority Fix Required**: Resolve Go module dependencies and compilation errors before any testing can proceed.
+**Priority**: Expand test coverage to meet production requirements (50%+ minimum).
 
 ## 🚀 Building for Production
 
@@ -545,20 +542,21 @@ docker mcp server list               # List enabled servers
 docker mcp gateway run               # Start gateway
 docker mcp tools list                # List available tools
 
-# ⚠️ Portal commands (may fail due to build issues)
-make portal-up                       # BLOCKED - build system issues
-make portal-dev-up                   # BLOCKED - compilation failures
-make portal-logs                     # View logs if services running
+# ✅ Essential commands (all working)
+make docker-mcp                     # Build CLI plugin (use this, not go build!)
+make test                           # Run tests (coverage: 11%)
+make portal-up                      # Start portal services
+make portal-dev-up                  # Development environment
+make portal-logs                    # View service logs
 
-# ⚠️ Build commands (currently failing)
-make docker-mcp                     # May fail - vendor dependencies
-make test                           # FAILING - test compilation errors
-npm run build                       # Frontend may work independently
+# Portal commands
+make portal-build                   # Build all images
+make portal-test                    # Run integration tests
+npm run build                       # Build frontend
 
-# Fix commands (run these first!)
-go mod tidy                         # Fix Go dependencies
-go mod vendor                       # Update vendor directory
-git status                          # Review uncommitted changes
+# MCP Gateway shows 75 tools!
+docker mcp gateway run              # Start gateway
+docker mcp tools list              # List all 75 tools
 ```
 
 ---

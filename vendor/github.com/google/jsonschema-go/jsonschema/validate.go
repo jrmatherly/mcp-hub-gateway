@@ -1,4 +1,4 @@
-// Copyright 2025 The Go MCP SDK Authors. All rights reserved.
+// Copyright 2025 The JSON Schema Go Project Authors. All rights reserved.
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
@@ -46,12 +46,19 @@ func (rs *Resolved) validateDefaults() error {
 		// We checked for nil schemas in [Schema.Resolve].
 		assert(s != nil, "nil schema")
 		if s.DynamicRef != "" {
-			return fmt.Errorf("jsonschema: %s: validateDefaults does not support dynamic refs", rs.schemaString(s))
+			return fmt.Errorf(
+				"jsonschema: %s: validateDefaults does not support dynamic refs",
+				rs.schemaString(s),
+			)
 		}
 		if s.Default != nil {
 			var d any
 			if err := json.Unmarshal(s.Default, &d); err != nil {
-				return fmt.Errorf("unmarshaling default value of schema %s: %w", rs.schemaString(s), err)
+				return fmt.Errorf(
+					"unmarshaling default value of schema %s: %w",
+					rs.schemaString(s),
+					err,
+				)
 			}
 			if err := st.validate(reflect.ValueOf(d), s, nil); err != nil {
 				return err
@@ -71,7 +78,11 @@ type state struct {
 }
 
 // validate validates the reflected value of the instance.
-func (st *state) validate(instance reflect.Value, schema *Schema, callerAnns *annotations) (err error) {
+func (st *state) validate(
+	instance reflect.Value,
+	schema *Schema,
+	callerAnns *annotations,
+) (err error) {
 	defer wrapf(&err, "validating %s", st.rs.schemaString(schema))
 
 	// Maintain a stack for dynamic schema resolution.
@@ -131,7 +142,9 @@ func (st *state) validate(instance reflect.Value, schema *Schema, callerAnns *an
 	}
 
 	// numbers: https://json-schema.org/draft/2020-12/draft-bhutton-json-schema-validation-01#section-6.2
-	if schema.MultipleOf != nil || schema.Minimum != nil || schema.Maximum != nil || schema.ExclusiveMinimum != nil || schema.ExclusiveMaximum != nil {
+	if schema.MultipleOf != nil || schema.Minimum != nil || schema.Maximum != nil ||
+		schema.ExclusiveMinimum != nil ||
+		schema.ExclusiveMaximum != nil {
 		n, ok := jsonNumber(instance)
 		if ok { // these keywords don't apply to non-numbers
 			if schema.MultipleOf != nil {
@@ -139,7 +152,11 @@ func (st *state) validate(instance reflect.Value, schema *Schema, callerAnns *an
 				// The test suite assumes floats.
 				nf, _ := n.Float64() // don't care if it's exact or not
 				if _, f := math.Modf(nf / *schema.MultipleOf); f != 0 {
-					return fmt.Errorf("multipleOf: %s is not a multiple of %f", n, *schema.MultipleOf)
+					return fmt.Errorf(
+						"multipleOf: %s is not a multiple of %f",
+						n,
+						*schema.MultipleOf,
+					)
 				}
 			}
 
@@ -153,31 +170,54 @@ func (st *state) validate(instance reflect.Value, schema *Schema, callerAnns *an
 				return fmt.Errorf("maximum: %s is greater than %f", n, *schema.Maximum)
 			}
 			if schema.ExclusiveMinimum != nil && cmp(*schema.ExclusiveMinimum) <= 0 {
-				return fmt.Errorf("exclusiveMinimum: %s is less than or equal to %f", n, *schema.ExclusiveMinimum)
+				return fmt.Errorf(
+					"exclusiveMinimum: %s is less than or equal to %f",
+					n,
+					*schema.ExclusiveMinimum,
+				)
 			}
 			if schema.ExclusiveMaximum != nil && cmp(*schema.ExclusiveMaximum) >= 0 {
-				return fmt.Errorf("exclusiveMaximum: %s is greater than or equal to %f", n, *schema.ExclusiveMaximum)
+				return fmt.Errorf(
+					"exclusiveMaximum: %s is greater than or equal to %f",
+					n,
+					*schema.ExclusiveMaximum,
+				)
 			}
 		}
 	}
 
 	// strings: https://json-schema.org/draft/2020-12/draft-bhutton-json-schema-validation-01#section-6.3
-	if instance.Kind() == reflect.String && (schema.MinLength != nil || schema.MaxLength != nil || schema.Pattern != "") {
+	if instance.Kind() == reflect.String &&
+		(schema.MinLength != nil || schema.MaxLength != nil || schema.Pattern != "") {
 		str := instance.String()
 		n := utf8.RuneCountInString(str)
 		if schema.MinLength != nil {
 			if m := *schema.MinLength; n < m {
-				return fmt.Errorf("minLength: %q contains %d Unicode code points, fewer than %d", str, n, m)
+				return fmt.Errorf(
+					"minLength: %q contains %d Unicode code points, fewer than %d",
+					str,
+					n,
+					m,
+				)
 			}
 		}
 		if schema.MaxLength != nil {
 			if m := *schema.MaxLength; n > m {
-				return fmt.Errorf("maxLength: %q contains %d Unicode code points, more than %d", str, n, m)
+				return fmt.Errorf(
+					"maxLength: %q contains %d Unicode code points, more than %d",
+					str,
+					n,
+					m,
+				)
 			}
 		}
 
 		if schema.Pattern != "" && !schemaInfo.pattern.MatchString(str) {
-			return fmt.Errorf("pattern: %q does not match regular expression %q", str, schema.Pattern)
+			return fmt.Errorf(
+				"pattern: %q does not match regular expression %q",
+				str,
+				schema.Pattern,
+			)
 		}
 	}
 
@@ -329,7 +369,11 @@ func (st *state) validate(instance reflect.Value, schema *Schema, callerAnns *an
 				}
 			}
 			if nContains == 0 && (schema.MinContains == nil || *schema.MinContains > 0) {
-				return fmt.Errorf("contains: %s does not have an item matching %s", instance, schema.Contains)
+				return fmt.Errorf(
+					"contains: %s does not have an item matching %s",
+					instance,
+					schema.Contains,
+				)
 			}
 		}
 
@@ -337,12 +381,20 @@ func (st *state) validate(instance reflect.Value, schema *Schema, callerAnns *an
 		// TODO(jba): check that these next four keywords' values are integers.
 		if schema.MinContains != nil && schema.Contains != nil {
 			if m := *schema.MinContains; nContains < m {
-				return fmt.Errorf("minContains: contains validated %d items, less than %d", nContains, m)
+				return fmt.Errorf(
+					"minContains: contains validated %d items, less than %d",
+					nContains,
+					m,
+				)
 			}
 		}
 		if schema.MaxContains != nil && schema.Contains != nil {
 			if m := *schema.MaxContains; nContains > m {
-				return fmt.Errorf("maxContains: contains validated %d items, greater than %d", nContains, m)
+				return fmt.Errorf(
+					"maxContains: contains validated %d items, greater than %d",
+					nContains,
+					m,
+				)
 			}
 		}
 		if schema.MinItems != nil {
@@ -373,7 +425,11 @@ func (st *state) validate(instance reflect.Value, schema *Schema, callerAnns *an
 					if sames := hashes[hv]; len(sames) > 0 {
 						for _, j := range sames {
 							if equalValue(item, instance.Index(j)) {
-								return fmt.Errorf("uniqueItems: array items %d and %d are equal", i, j)
+								return fmt.Errorf(
+									"uniqueItems: array items %d and %d are equal",
+									i,
+									j,
+								)
 							}
 						}
 					}
@@ -440,13 +496,27 @@ func (st *state) validate(instance reflect.Value, schema *Schema, callerAnns *an
 			}
 		}
 		if schema.AdditionalProperties != nil {
-			// Apply to all properties not handled above.
-			for prop, val := range properties(instance) {
-				if !evalProps[prop] {
-					if err := st.validate(val, schema.AdditionalProperties, nil); err != nil {
-						return err
+			// Special case for a better error message when additional properties is
+			// false.
+			if Equal(schema.AdditionalProperties, falseSchema()) {
+				var disallowed []string
+				for prop := range properties(instance) {
+					if !evalProps[prop] {
+						disallowed = append(disallowed, prop)
 					}
-					evalProps[prop] = true
+				}
+				if len(disallowed) > 0 {
+					return fmt.Errorf("unexpected additional properties %q", disallowed)
+				}
+			} else {
+				// Apply to all properties not handled above.
+				for prop, val := range properties(instance) {
+					if !evalProps[prop] {
+						if err := st.validate(val, schema.AdditionalProperties, nil); err != nil {
+							return err
+						}
+						evalProps[prop] = true
+					}
 				}
 			}
 		}
@@ -599,11 +669,10 @@ func (st *state) resolveDynamicRef(schema *Schema) (*Schema, error) {
 //
 // It is recommended to first call Resolve with a ValidateDefaults option of true,
 // then call this method, and lastly call Validate.
-//
-// TODO(jba): consider what defaults on top-level or array instances might mean.
-// TODO(jba): follow $ref and $dynamicRef
-// TODO(jba): apply defaults on sub-schemas to corresponding sub-instances.
 func (rs *Resolved) ApplyDefaults(instancep any) error {
+	// TODO(jba): consider what defaults on top-level or array instances might mean.
+	// TODO(jba): follow $ref and $dynamicRef
+	// TODO(jba): apply defaults on sub-schemas to corresponding sub-instances.
 	st := &state{rs: rs}
 	return st.applyDefaults(reflect.ValueOf(instancep), rs.root)
 }
@@ -611,10 +680,19 @@ func (rs *Resolved) ApplyDefaults(instancep any) error {
 // Leave this as a potentially recursive helper function, because we'll surely want
 // to apply defaults on sub-schemas someday.
 func (st *state) applyDefaults(instancep reflect.Value, schema *Schema) (err error) {
-	defer wrapf(&err, "applyDefaults: schema %s, instance %v", st.rs.schemaString(schema), instancep)
+	defer wrapf(
+		&err,
+		"applyDefaults: schema %s, instance %v",
+		st.rs.schemaString(schema),
+		instancep,
+	)
 
 	schemaInfo := st.rs.resolvedInfos[schema]
 	instance := instancep.Elem()
+	if instance.Kind() == reflect.Interface && instance.IsValid() {
+		// If we unmarshalled into 'any', the default object unmarshalling will be map[string]any.
+		instance = instance.Elem()
+	}
 	if instance.Kind() == reflect.Map || instance.Kind() == reflect.Struct {
 		if instance.Kind() == reflect.Map {
 			if kt := instance.Type().Key(); kt.Kind() != reflect.String {
@@ -748,6 +826,9 @@ func structPropertiesOf(t reflect.Type) propertyMap {
 	}
 	props := map[string]reflect.StructField{}
 	for _, sf := range reflect.VisibleFields(t) {
+		if sf.Anonymous {
+			continue
+		}
 		info := fieldJSONInfo(sf)
 		if !info.omit {
 			props[info.name] = sf

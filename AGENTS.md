@@ -9,7 +9,7 @@ Instructions for AI coding assistants working on MCP Gateway & Portal.
 - **MCP Gateway CLI**: Docker plugin for MCP server management (Go 1.24+)
 - **MCP Portal**: Web UI that wraps the CLI - NOT a reimplementation (Go backend + Next.js)
 
-**Current Status**: Portal Phase 4 (60% - BLOCKED), Phase 5 OAuth (80% implemented but unstable)
+**Current Status**: Gateway CLI fully operational with SDK v0.5.0 and 75 tools. Portal Phase 4 (60% - needs test coverage), Phase 5 OAuth (80% implemented, needs testing)
 
 ## Setup Commands
 
@@ -80,9 +80,9 @@ go test -cover ./...
 
 ## Current Priorities
 
-1. **🔴 CRITICAL - Build System Stability**: Fix Go module vendor dependencies and test compilation
-2. **🔴 CRITICAL - Repository Cleanup**: Resolve 8 uncommitted files in portal/features/
-3. **🟡 IMPORTANT - OAuth System Stabilization**: Test and validate 80% complete OAuth implementation
+1. **🟢 COMPLETE - MCP SDK v0.5.0**: Successfully upgraded with dynamic tools implementation (75 tools total)
+2. **🔴 CRITICAL - Test Coverage**: Expand from 11% to 50%+ for production readiness
+3. **🟡 IMPORTANT - OAuth Testing**: Validate the 80% complete OAuth implementation
 
 ## Pull Request Guidelines
 

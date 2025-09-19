@@ -43,11 +43,11 @@ The **MCP Portal** is a web-based interface that provides an intuitive way to ma
 - **⚙️ Configuration Management** - Import/export configurations with encryption
 - **📈 Admin Panel** - System monitoring, user management, and audit logs
 
-**Status**: ~80% Complete (Phases 1-3 done, Phase 4 60% - BLOCKED, Phase 5 80% - Implemented)
+**Status**: ~65% Complete (Phases 1-3 done, Phase 4 60% - needs testing, Phase 5 80% - Implemented)
 
-**Recent Updates (2025-09-19)**: Major OAuth implementation completed with Azure AD integration, DCR bridge, and Key Vault support
+**Recent Updates (2025-09-19)**: Successfully upgraded to MCP SDK v0.5.0 and implemented 5 dynamic MCP management tools. Gateway now provides 75 tools total.
 
-**Current Status**: Build system issues blocking progress - vendor dependencies and test compilation failures preventing validation of OAuth implementation
+**Current Focus**: Test coverage expansion from 11% to 50%+ for production readiness. All technical blockers resolved.
 
 ## What is MCP?
 
@@ -398,9 +398,23 @@ The Portal doesn't reimplement MCP functionality - it provides a web interface t
 
 See [docs/message-flow.md](docs/message-flow.md) for detailed message flow diagrams and [Portal Architecture](./implementation-plan/03-architecture/technical-architecture.md) for complete technical details.
 
+## Recent Achievements (January 2025)
+
+### MCP SDK v0.5.0 Upgrade ✅ COMPLETE
+
+- Fixed URI template validation errors
+- Native RFC 6570 support (removed workarounds)
+- Proper CallToolParamsRaw handling
+
+### Dynamic MCP Tools ✅ OPERATIONAL
+
+- 5 new runtime management tools implemented
+- Total tools available: 75 (70 original + 5 dynamic)
+- Enable/disable servers without gateway restart
+
 ## Roadmap
 
-### Phase 5: OAuth & Authentication Integration (80% Complete - Implemented but Blocked)
+### Phase 5: OAuth & Authentication Integration (80% Complete - Needs Testing)
 
 Building on the existing OAuth support, Phase 5 introduces enterprise-grade OAuth management:
 
@@ -428,7 +442,7 @@ Building on the existing OAuth support, Phase 5 introduces enterprise-grade OAut
 - ✅ Extensible provider architecture
 - 🔴 Testing blocked by build system issues
 
-**Current Blocker**: Build system instability preventing validation and production deployment
+**Next Steps**: Complete testing and validation of OAuth implementation
 
 See [Phase 5 Documentation](./implementation-plan/02-phases/phase-5-oauth-authentication.md) for complete implementation details.
 

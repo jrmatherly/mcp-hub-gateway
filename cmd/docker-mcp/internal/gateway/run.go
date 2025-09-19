@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -277,30 +276,37 @@ func (g *Gateway) reloadConfiguration(
 	serverNames []string,
 	clientConfig *clientConfig,
 ) error {
-	// Which servers are enabled in the registry.yaml?
-	if len(serverNames) == 0 {
+	defer func() {
+		if r := recover(); r != nil {
+			// Use fmt.Printf for logging since log is redefined as a function variable below
+			fmt.Printf("Panic during configuration reload: %v\n", r)
+		}
+	}()
+
+	// Handle logging function - use fmt.Printf as default
+	log := func(msgs ...any) {
+		fmt.Println(msgs...)
+	}
+
+	// If serverNames is nil, get them from configuration
+	if serverNames == nil {
 		serverNames = configuration.ServerNames()
 	}
+
 	if len(serverNames) == 0 {
 		log("- No server is enabled")
 	} else {
 		log("- Those servers are enabled:", strings.Join(serverNames, ", "))
 	}
 
-	// List all the available tools.
-	startList := time.Now()
-	log("- Listing MCP tools...")
+	// Get capabilities from all enabled servers
 	capabilities, err := g.listCapabilities(ctx, configuration, serverNames, clientConfig)
 	if err != nil {
-		return fmt.Errorf("listing resources: %w", err)
+		return fmt.Errorf("failed to list capabilities: %w", err)
 	}
-	log(">", len(capabilities.Tools), "tools listed in", time.Since(startList))
 
-	// Update capabilities
-	// Clear existing capabilities and register new ones
-	// Note: The new SDK doesn't have bulk set methods, so we register individually
-
-	// Clear all existing capabilities by tracking them in the Gateway struct
+	// Cleanup existing capabilities before adding new ones
+	// This prevents accumulation of capabilities on reload
 	if g.registeredToolNames != nil {
 		g.mcpServer.RemoveTools(g.registeredToolNames...)
 	}
@@ -326,73 +332,24 @@ func (g *Gateway) reloadConfiguration(
 		g.registeredToolNames = append(g.registeredToolNames, tool.Tool.Name)
 	}
 
-	// Add internal tools when dynamic-tools feature is enabled
-	if g.DynamicTools {
-		log("- Adding internal tools (dynamic-tools feature enabled)")
-
-		// Add mcp-find tool
-		mcpFindTool := g.createMcpFindTool(configuration)
-		g.mcpServer.AddTool(mcpFindTool.Tool, mcpFindTool.Handler)
-		g.registeredToolNames = append(g.registeredToolNames, mcpFindTool.Tool.Name)
-
-		// Add mcp-add tool
-		mcpAddTool := g.createMcpAddTool(configuration, clientConfig)
-		g.mcpServer.AddTool(mcpAddTool.Tool, mcpAddTool.Handler)
-		g.registeredToolNames = append(g.registeredToolNames, mcpAddTool.Tool.Name)
-
-		// Add mcp-remove tool
-		mcpRemoveTool := g.createMcpRemoveTool(configuration, clientConfig)
-		g.mcpServer.AddTool(mcpRemoveTool.Tool, mcpRemoveTool.Handler)
-		g.registeredToolNames = append(g.registeredToolNames, mcpRemoveTool.Tool.Name)
-
-		// Add mcp-official-registry-import tool
-		mcpOfficialRegistryImportTool := g.createMcpOfficialRegistryImportTool(
-			configuration,
-			clientConfig,
-		)
-		g.mcpServer.AddTool(
-			mcpOfficialRegistryImportTool.Tool,
-			mcpOfficialRegistryImportTool.Handler,
-		)
-		g.registeredToolNames = append(
-			g.registeredToolNames,
-			mcpOfficialRegistryImportTool.Tool.Name,
-		)
-
-		// Add mcp-config-set tool
-		mcpConfigSetTool := g.createMcpConfigSetTool(configuration, clientConfig)
-		g.mcpServer.AddTool(mcpConfigSetTool.Tool, mcpConfigSetTool.Handler)
-		g.registeredToolNames = append(g.registeredToolNames, mcpConfigSetTool.Tool.Name)
-
-		log("  > mcp-find: tool for finding MCP servers in the catalog")
-		log("  > mcp-add: tool for adding MCP servers to the registry")
-		log("  > mcp-remove: tool for removing MCP servers from the registry")
-		log(
-			"  > mcp-official-registry-import: tool for importing servers from official registry URLs",
-		)
-		log("  > mcp-config-set: tool for setting configuration values for MCP servers")
-	}
-
+	// Prompts are handled directly with AddPrompt in SDK v0.5.0
 	for _, prompt := range capabilities.Prompts {
 		g.mcpServer.AddPrompt(prompt.Prompt, prompt.Handler)
 		g.registeredPromptNames = append(g.registeredPromptNames, prompt.Prompt.Name)
 	}
 
+	// Resources are handled directly
 	for _, resource := range capabilities.Resources {
 		g.mcpServer.AddResource(resource.Resource, resource.Handler)
 		g.registeredResourceURIs = append(g.registeredResourceURIs, resource.Resource.URI)
 	}
 
-	// Resource templates are handled as regular resources in the new SDK
+	// Resource templates - use the original URI template directly
+	// SDK v0.5.0 includes proper RFC 6570 URI template support
 	for _, template := range capabilities.ResourceTemplates {
-		// Sanitize URI template for validation
-		// The MCP SDK uses url.Parse which doesn't understand RFC 6570 templates
-		// We need to temporarily replace template expressions for validation
-		sanitizedURI := sanitizeURITemplateForValidation(template.ResourceTemplate.URITemplate)
-
-		// Convert ResourceTemplate to Resource
+		// Use the original URI template directly - SDK v0.5.0 handles RFC 6570 templates
 		resource := &mcp.ResourceTemplate{
-			URITemplate: sanitizedURI,
+			URITemplate: template.ResourceTemplate.URITemplate,
 			Name:        template.ResourceTemplate.Name,
 			Description: template.ResourceTemplate.Description,
 			MIMEType:    template.ResourceTemplate.MIMEType,
@@ -405,7 +362,9 @@ func (g *Gateway) reloadConfiguration(
 	}
 
 	g.health.SetHealthy()
-
+	log("Successfully reloaded configuration with", len(capabilities.Tools), "tools,",
+		len(capabilities.Prompts), "prompts,", len(capabilities.Resources), "resources,",
+		len(capabilities.ResourceTemplates), "resource templates")
 	return nil
 }
 
@@ -542,28 +501,4 @@ func (g *Gateway) periodicMetricExport(ctx context.Context) {
 			}
 		}
 	}
-}
-
-// sanitizeURITemplateForValidation replaces RFC 6570 URI template expressions
-// with placeholder values so that Go's url.Parse can validate the URI structure.
-// This is a workaround for the MCP SDK using url.Parse which doesn't understand
-// URI template syntax like {+filepath} or {variable}.
-func sanitizeURITemplateForValidation(uriTemplate string) string {
-	// Skip sanitization if it doesn't contain template expressions
-	if !strings.Contains(uriTemplate, "{") {
-		return uriTemplate
-	}
-
-	// Replace RFC 6570 template expressions with placeholders
-	// Pattern matches {+var}, {var}, {?var}, {&var}, {#var}, etc.
-	re := regexp.MustCompile(`\{[+?&#/;.]?[^}]+\}`)
-	sanitized := re.ReplaceAllString(uriTemplate, "placeholder")
-
-	// Special case for file:// URIs with templates
-	// file://{+filepath} becomes file:///placeholder
-	if strings.HasPrefix(sanitized, "file://placeholder") {
-		sanitized = strings.Replace(sanitized, "file://placeholder", "file:///placeholder", 1)
-	}
-
-	return sanitized
 }

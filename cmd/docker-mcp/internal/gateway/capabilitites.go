@@ -48,6 +48,7 @@ func (g *Gateway) listCapabilities(
 	serverNames []string,
 	clientConfig *clientConfig,
 ) (*Capabilities, error) {
+	logf("  > listCapabilities called with %d serverNames", len(serverNames))
 	var (
 		lock            sync.Mutex
 		allCapabilities []Capabilities
@@ -223,6 +224,18 @@ func (g *Gateway) listCapabilities(
 		allPrompts = append(allPrompts, capabilities.Prompts...)
 		allResources = append(allResources, capabilities.Resources...)
 		allResourceTemplates = append(allResourceTemplates, capabilities.ResourceTemplates...)
+	}
+
+	// Add dynamic MCP management tools
+	// These tools allow runtime management of MCP servers without restarting the gateway
+	logf("  > Adding dynamic MCP tools...")
+	dynamicTools := g.createDynamicMcpTools(configuration, clientConfig)
+	logf("  > Created %d dynamic tools", len(dynamicTools))
+	allTools = append(allTools, dynamicTools...)
+
+	// Log the dynamic tools being added
+	for _, tool := range dynamicTools {
+		logf("  > Added dynamic tool: %s", tool.Tool.Name)
 	}
 
 	return &Capabilities{

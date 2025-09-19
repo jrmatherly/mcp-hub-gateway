@@ -93,16 +93,6 @@ func (*StdioTransport) Connect(context.Context) (Connection, error) {
 	return newIOConn(rwc{os.Stdin, os.Stdout}), nil
 }
 
-// NewStdioTransport constructs a transport that communicates over
-// stdin/stdout.
-//
-// Deprecated: use a StdioTransport literal.
-//
-//go:fix inline
-func NewStdioTransport() *StdioTransport {
-	return &StdioTransport{}
-}
-
 // An InMemoryTransport is a [Transport] that communicates over an in-memory
 // network connection, using newline-delimited JSON.
 type InMemoryTransport struct {
@@ -131,7 +121,13 @@ type handler interface {
 	handle(ctx context.Context, req *jsonrpc.Request) (any, error)
 }
 
-func connect[H handler, State any](ctx context.Context, t Transport, b binder[H, State], s State, onClose func()) (H, error) {
+func connect[H handler, State any](
+	ctx context.Context,
+	t Transport,
+	b binder[H, State],
+	s State,
+	onClose func(),
+) (H, error) {
 	var zero H
 	mcpConn, err := t.Connect(ctx)
 	if err != nil {
@@ -187,14 +183,20 @@ func (c *canceller) Preempt(ctx context.Context, req *jsonrpc.Request) (result a
 
 // call executes and awaits a jsonrpc2 call on the given connection,
 // translating errors into the mcp domain.
-func call(ctx context.Context, conn *jsonrpc2.Connection, method string, params Params, result Result) error {
+func call(
+	ctx context.Context,
+	conn *jsonrpc2.Connection,
+	method string,
+	params Params,
+	result Result,
+) error {
 	// TODO: the "%w"s in this function effectively make jsonrpc2.WireError part of the API.
 	// Consider alternatives.
 	call := conn.Call(ctx, method, params)
 	err := call.Await(ctx, result)
 	switch {
 	case errors.Is(err, jsonrpc2.ErrClientClosing), errors.Is(err, jsonrpc2.ErrServerClosing):
-		return fmt.Errorf("calling %q: %w", method, ErrConnectionClosed)
+		return fmt.Errorf("%w: calling %q: %v", ErrConnectionClosed, method, err)
 	case ctx.Err() != nil:
 		// Notify the peer of cancellation.
 		err := conn.Notify(xcontext.Detach(ctx), notificationCancelled, &CancelledParams{
@@ -213,16 +215,6 @@ func call(ctx context.Context, conn *jsonrpc2.Connection, method string, params 
 type LoggingTransport struct {
 	Transport Transport
 	Writer    io.Writer
-}
-
-// NewLoggingTransport creates a new LoggingTransport that delegates to the
-// provided transport, writing RPC logs to the provided io.Writer.
-//
-// Deprecated: use a LoggingTransport literal.
-//
-//go:fix inline
-func NewLoggingTransport(delegate Transport, w io.Writer) *LoggingTransport {
-	return &LoggingTransport{Transport: delegate, Writer: w}
 }
 
 // Connect connects the underlying transport, returning a [Connection] that writes
@@ -303,6 +295,8 @@ func (r rwc) Close() error {
 //
 // See [msgBatch] for more discussion of message batching.
 type ioConn struct {
+	protocolVersion string // negotiated version, set during session initialization.
+
 	writeMu sync.Mutex         // guards Write, which must be concurrency safe.
 	rwc     io.ReadWriteCloser // the underlying stream
 
@@ -380,6 +374,17 @@ func newIOConn(rwc io.ReadWriteCloser) *ioConn {
 
 func (c *ioConn) SessionID() string { return "" }
 
+func (c *ioConn) sessionUpdated(state ServerSessionState) {
+	protocolVersion := ""
+	if state.InitializeParams != nil {
+		protocolVersion = state.InitializeParams.ProtocolVersion
+	}
+	if protocolVersion == "" {
+		protocolVersion = protocolVersion20250326
+	}
+	c.protocolVersion = negotiatedVersion(protocolVersion)
+}
+
 // addBatch records a msgBatch for an incoming batch payload.
 // It returns an error if batch is malformed, containing previously seen IDs.
 //
@@ -389,7 +394,11 @@ func (t *ioConn) addBatch(batch *msgBatch) error {
 	defer t.batchMu.Unlock()
 	for id := range batch.unresolved {
 		if _, ok := t.batches[id]; ok {
-			return fmt.Errorf("%w: batch contains previously seen request %v", jsonrpc2.ErrInvalidRequest, id.Raw())
+			return fmt.Errorf(
+				"%w: batch contains previously seen request %v",
+				jsonrpc2.ErrInvalidRequest,
+				id.Raw(),
+			)
 		}
 	}
 	for id := range batch.unresolved {
@@ -478,6 +487,14 @@ func (t *ioConn) Read(ctx context.Context) (jsonrpc.Message, error) {
 	if err != nil {
 		return nil, err
 	}
+	if batch && t.protocolVersion >= protocolVersion20250618 {
+		return nil, fmt.Errorf(
+			"JSON-RPC batching is not supported in %s and later (request version: %s)",
+			protocolVersion20250618,
+			t.protocolVersion,
+		)
+	}
+
 	t.queue = msgs[1:]
 
 	if batch {
