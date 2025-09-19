@@ -392,21 +392,25 @@ See [docs/message-flow.md](docs/message-flow.md) for detailed message flow diagr
 Building on the existing OAuth support, Phase 5 will introduce enterprise-grade OAuth management:
 
 **OAuth Interceptor Middleware**
+
 - Automatic 401 response detection and handling
 - Token refresh with exponential backoff
 - Provider-specific OAuth configuration
 
 **Dynamic Client Registration (DCR)**
+
 - RFC 7591 compliant DCR bridge service
 - Azure AD Graph API integration for app registration
 - Automatic client credential generation
 
 **Enhanced Secret Management**
+
 - Docker Desktop secrets integration (optional)
 - Hierarchical storage: Azure Key Vault → Docker Desktop → Environment Variables
 - Pre-authorization CLI commands: `docker mcp oauth authorize <provider>`
 
 **Multi-Provider Support**
+
 - GitHub, Google, Microsoft OAuth providers
 - Feature flags for gradual rollout
 - Provider marketplace for future expansion
