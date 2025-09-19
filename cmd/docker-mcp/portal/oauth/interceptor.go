@@ -141,6 +141,7 @@ func (i *DefaultOAuthInterceptor) attemptRequestWithRetry(
 
 	for attempt := 0; attempt <= maxRetries; attempt++ {
 		req.AttemptCount = attempt + 1
+		tokenWasRefreshed := false
 
 		// Get current token
 		token, err := i.GetToken(ctx, req.ServerName, req.UserID)
@@ -167,6 +168,7 @@ func (i *DefaultOAuthInterceptor) attemptRequestWithRetry(
 				)
 			} else {
 				token = refreshedToken
+				tokenWasRefreshed = true
 				i.metricsCollector.RecordTokenRefresh(ctx, req.ServerName, serverConfig.ProviderType, true)
 			}
 		}
@@ -180,6 +182,11 @@ func (i *DefaultOAuthInterceptor) attemptRequestWithRetry(
 			}
 			time.Sleep(i.calculateBackoffDelay(attempt))
 			continue
+		}
+
+		// Mark if token was refreshed for this request
+		if tokenWasRefreshed {
+			response.TokenRefreshed = true
 		}
 
 		lastResponse = response

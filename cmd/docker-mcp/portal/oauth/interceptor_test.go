@@ -452,7 +452,7 @@ func TestOAuthInterceptor_InterceptRequest_Success(t *testing.T) {
 	mockStorage.On("StoreToken", mock.Anything, mock.AnythingOfType("*oauth.TokenData"), mock.AnythingOfType("oauth.StorageTier")).
 		Return(nil)
 	mockRegistry.On("GetProvider", ProviderTypeGitHub).Return(mockProvider, nil)
-	mockProvider.On("SupportsRefresh").Return(false)
+	// Note: SupportsRefresh not called since token doesn't need refresh
 	mockValidator.On("ValidateServerConfig", mock.AnythingOfType("*oauth.ServerConfig")).
 		Return([]ValidationError(nil))
 	mockMetrics.On(
@@ -706,17 +706,14 @@ func TestOAuthInterceptor_InterceptRequest_401Retry(t *testing.T) {
 
 	// Setup mock expectations
 	mockStorage.On("GetToken", mock.Anything, serverName, userID).Return(token, nil).Once()
-	mockStorage.On("GetToken", mock.Anything, serverName, userID).Return(refreshedToken, nil).Once()
 	mockRegistry.On("GetProvider", ProviderTypeGoogle).Return(mockProvider, nil)
 	mockProvider.On("SupportsRefresh").Return(true)
-	mockProvider.On("RefreshToken", mock.Anything, serverConfig, "refresh-token").
-		Return(refreshedToken, nil)
+	// For 401 retry, the interceptor calls storage.RefreshToken, not provider.RefreshToken
+	mockStorage.On("RefreshToken", mock.Anything, serverName, userID).Return(refreshedToken, nil)
 	mockValidator.On("ValidateServerConfig", mock.AnythingOfType("*oauth.ServerConfig")).
 		Return([]ValidationError(nil))
-	mockStorage.On("RefreshToken", mock.Anything, serverName, userID).Return(refreshedToken, nil)
 	mockStorage.On("StoreToken", mock.Anything, mock.AnythingOfType("*oauth.TokenData"), mock.AnythingOfType("oauth.StorageTier")).
 		Return(nil)
-	mockMetrics.On("RecordTokenRefresh", mock.Anything, serverName, ProviderTypeGoogle, true)
 	mockMetrics.On(
 		"RecordRequest",
 		mock.Anything,
@@ -875,6 +872,7 @@ func TestOAuthInterceptor_TokenManagement(t *testing.T) {
 	}
 
 	// Setup mock expectations for token operations
+	mockValidator.On("ValidateServerConfig", serverConfig).Return([]ValidationError{})
 	mockValidator.On("ValidateToken", token).Return([]ValidationError{})
 	mockStorage.On("StoreToken", mock.Anything, token, StorageTierKeyVault).Return(nil)
 	mockStorage.On("GetToken", mock.Anything, serverName, userID).Return(token, nil)
