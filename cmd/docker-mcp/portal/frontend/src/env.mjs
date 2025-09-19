@@ -64,6 +64,8 @@ export const env = createEnv({
     NEXT_PUBLIC_WS_URL: z.url().default('ws://localhost:8080'),
 
     // Azure AD Public Configuration
+    NEXT_PUBLIC_AZURE_TENANT_ID: z.string().optional(),
+    NEXT_PUBLIC_AZURE_CLIENT_ID: z.string().optional(),
     NEXT_PUBLIC_AZURE_REDIRECT_URI: z
       .url()
       .default('http://localhost:3000/auth/callback'),
@@ -161,6 +163,8 @@ export const env = createEnv({
     NEXT_PUBLIC_AZURE_REDIRECT_URI: process.env.NEXT_PUBLIC_AZURE_REDIRECT_URI,
     NEXT_PUBLIC_AZURE_POST_LOGOUT_URI:
       process.env.NEXT_PUBLIC_AZURE_POST_LOGOUT_URI,
+    NEXT_PUBLIC_AZURE_CLIENT_ID: process.env.NEXT_PUBLIC_AZURE_CLIENT_ID,
+    NEXT_PUBLIC_AZURE_TENANT_ID: process.env.NEXT_PUBLIC_AZURE_TENANT_ID,
     NEXT_PUBLIC_AZURE_AUTHORITY: process.env.NEXT_PUBLIC_AZURE_AUTHORITY,
     NEXT_PUBLIC_AZURE_SCOPES: process.env.NEXT_PUBLIC_AZURE_SCOPES,
     NEXT_PUBLIC_DEBUG: process.env.NEXT_PUBLIC_DEBUG,

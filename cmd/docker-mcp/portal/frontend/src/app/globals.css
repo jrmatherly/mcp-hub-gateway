@@ -1,27 +1,20 @@
-/* Tailwind CSS v4 - Use @import for better performance */
-@import 'tailwindcss';
+/*
+ * CSS Import Order (Critical):
+ * 1. @charset (if needed)
+ * 2. @import statements (fonts, external CSS)
+ * 3. @import 'tailwindcss'
+ * 4. @layer rules
+ * 5. All other CSS rules
+ *
+ * DO NOT place @import after tailwindcss or @layer rules - it will cause parsing errors
+ */
 
-/* Optimized font imports with variable fonts for better performance */
+/* Font imports MUST come first (before Tailwind) */
 @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
 
-/* Font face declarations for better control */
-@font-face {
-  font-family: 'Inter Variable';
-  src: url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
-  font-display: swap;
-  font-style: normal;
-  font-weight: 100 900;
-  font-stretch: 75% 125%;
-}
-
-@font-face {
-  font-family: 'JetBrains Mono Variable';
-  src: url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
-  font-display: swap;
-  font-style: normal;
-  font-weight: 100 800;
-}
+/* Tailwind CSS v4 - Must come after font imports */
+@import 'tailwindcss';
 
 @layer base {
   /* v4: Enhanced CSS custom properties with better organization */

@@ -29,7 +29,11 @@ function initializeMsal(): PublicClientApplication | null {
     // Validate configuration before initialization
     const validation = validateMsalConfig();
     if (!validation.isValid) {
-      authLogger.error('MSAL Configuration Error:', validation.errors);
+      authLogger.error(
+        'MSAL Configuration Error:',
+        validation.errors.join(', ')
+      );
+      console.error('MSAL Configuration Errors:', validation.errors);
       return null;
     }
 
@@ -180,6 +184,7 @@ interface AuthProviderProps {
 interface AuthProviderState {
   hasError: boolean;
   error?: Error;
+  isInitialized: boolean;
 }
 
 /**
@@ -257,13 +262,14 @@ class AuthProviderClass extends React.Component<
 
   constructor(props: AuthProviderProps) {
     super(props);
-    this.state = { hasError: false };
+    this.state = { hasError: false, isInitialized: false };
   }
 
   static getDerivedStateFromError(error: Error): AuthProviderState {
     return {
       hasError: true,
       error,
+      isInitialized: false,
     };
   }
 
@@ -293,11 +299,15 @@ class AuthProviderClass extends React.Component<
 
       // Handle redirect promise
       await this.msalInstance.handleRedirectPromise();
+
+      // Mark as initialized and trigger re-render
+      this.setState({ hasError: false, isInitialized: true });
     } catch (error) {
       authLogger.error('Auth initialization error', error);
       this.setState({
         hasError: true,
         error: error as Error,
+        isInitialized: false,
       });
     }
   }
@@ -307,7 +317,7 @@ class AuthProviderClass extends React.Component<
       return <AuthErrorFallback error={this.state.error} />;
     }
 
-    if (!this.msalInstance) {
+    if (!this.state.isInitialized || !this.msalInstance) {
       // Loading state while MSAL initializes
       return (
         <div className="min-h-screen flex items-center justify-center bg-background">

@@ -4,22 +4,23 @@ import {
   LogLevel,
 } from '@azure/msal-browser';
 import { authLogger } from '@/lib/logger';
+import { env } from '@/env.mjs';
 
 /**
  * MSAL Configuration for Azure AD B2C Integration
  * Supports both development and production environments
  */
 
-// Environment variables with fallbacks
-const CLIENT_ID = process.env.NEXT_PUBLIC_AZURE_CLIENT_ID || '';
-const TENANT_ID = process.env.NEXT_PUBLIC_AZURE_TENANT_ID || '';
+// Environment variables with type-safe access
+const CLIENT_ID = env.NEXT_PUBLIC_AZURE_CLIENT_ID || '';
+const TENANT_ID = env.NEXT_PUBLIC_AZURE_TENANT_ID || '';
 const REDIRECT_URI =
-  process.env.NEXT_PUBLIC_REDIRECT_URI ||
+  env.NEXT_PUBLIC_AZURE_REDIRECT_URI ||
   (typeof window !== 'undefined'
     ? `${window.location.origin}/auth/callback`
     : 'http://localhost:3000/auth/callback');
 const POST_LOGOUT_REDIRECT_URI =
-  process.env.NEXT_PUBLIC_POST_LOGOUT_REDIRECT_URI ||
+  env.NEXT_PUBLIC_AZURE_POST_LOGOUT_URI ||
   (typeof window !== 'undefined'
     ? window.location.origin
     : 'http://localhost:3000');
@@ -169,7 +170,7 @@ export const apiRequest = {
 export const protectedResources = {
   graphMeEndpoint: 'https://graph.microsoft.com/v1.0/me',
   mcpPortalApi: {
-    endpoint: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080',
+    endpoint: env.NEXT_PUBLIC_API_URL || 'http://localhost:8080',
     scopes: [`api://${CLIENT_ID}/access_as_user`],
   },
 };

@@ -2,9 +2,12 @@
 
 import { AlertCircle, Eye, EyeOff, Loader2, LogIn } from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useMsal } from '@azure/msal-react';
+import { useRouter } from 'next/navigation';
 import { authLogger } from '@/lib/logger';
 import { Button } from '@/components/ui/button';
+import { loginRequest } from '@/config/msal.config';
 
 interface LoginFormData {
   email: string;
@@ -19,6 +22,9 @@ interface FormErrors {
 }
 
 export default function LoginPage() {
+  const { instance } = useMsal();
+  const router = useRouter();
+
   const [formData, setFormData] = useState<LoginFormData>({
     email: '',
     password: '',
@@ -28,6 +34,15 @@ export default function LoginPage() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Check if already authenticated and redirect
+  useEffect(() => {
+    const accounts = instance.getAllAccounts();
+    if (accounts.length > 0) {
+      authLogger.info('User already authenticated, redirecting to dashboard');
+      router.push('/dashboard');
+    }
+  }, [instance, router]);
 
   const validateForm = (): FormErrors => {
     const newErrors: FormErrors = {};
@@ -103,21 +118,50 @@ export default function LoginPage() {
   const handleAzureLogin = async () => {
     setIsLoading(true);
     try {
-      // TODO: Implement Azure AD MSAL login
       authLogger.debug('Azure AD login initiated');
 
-      // Simulate Azure login
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Use MSAL redirect login for better compatibility
+      // Note: If Azure AD app is registered as "Web" instead of "SPA",
+      // you need to change it to "Single-page application" in Azure Portal
+      const loginResponse = await instance.loginPopup(loginRequest);
 
-      // TODO: Handle Azure AD response and redirect
-      authLogger.info('Azure AD login successful (simulated)');
-      window.location.href = '/dashboard';
+      authLogger.info('Azure AD login successful', {
+        username: loginResponse.account?.username,
+        homeAccountId: loginResponse.account?.homeAccountId,
+      });
+
+      // The router.push will trigger the AuthGuard to check authentication
+      router.push('/dashboard');
     } catch (azureError) {
       authLogger.error('Azure AD login failed', azureError);
+
+      // Handle specific MSAL errors
+      let errorMessage = 'Azure AD login failed. Please try again.';
+
+      // Type guard for MSAL error
+      const msalError = azureError as {
+        errorCode?: string;
+        errorMessage?: string;
+      };
+
+      if (msalError.errorCode === 'user_cancelled') {
+        errorMessage = 'Login was cancelled.';
+      } else if (msalError.errorCode === 'consent_required') {
+        errorMessage =
+          'Additional permissions are required. Please contact your administrator.';
+      } else if (msalError.errorCode === 'interaction_in_progress') {
+        errorMessage = 'Login already in progress. Please wait.';
+      } else if (msalError.errorCode === 'invalid_request') {
+        // Check for the specific SPA configuration error
+        if (msalError.errorMessage?.includes('AADSTS9002326')) {
+          errorMessage =
+            'Azure AD configuration error: The app must be registered as a "Single-page application" in Azure Portal, not as a "Web" application. Please contact your administrator to update the app registration.';
+        }
+      }
+
       setErrors({
-        general: 'Azure AD login failed. Please try again.',
+        general: errorMessage,
       });
-    } finally {
       setIsLoading(false);
     }
   };

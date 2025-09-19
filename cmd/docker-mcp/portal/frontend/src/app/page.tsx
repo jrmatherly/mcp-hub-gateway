@@ -71,7 +71,7 @@ export default function HomePage() {
             <Link href="/dashboard">Go to Dashboard</Link>
           </Button>
           <Button asChild variant="outline" size="lg">
-            <Link href="/auth/login">Sign In</Link>
+            <Link href="/auth/login">Sign In with Microsoft</Link>
           </Button>
         </div>
       </div>
