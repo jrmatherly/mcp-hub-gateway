@@ -45,6 +45,11 @@ func Root(ctx context.Context, cwd string, dockerCli command.Cli) *cobra.Command
 				return err
 			}
 
+			// Skip Docker Desktop check if explicitly disabled
+			if os.Getenv("DOCKER_MCP_SKIP_DESKTOP_CHECK") == "1" {
+				return nil
+			}
+
 			if os.Getenv("DOCKER_MCP_IN_CONTAINER") != "1" {
 				runningInDockerCE, err := docker.RunningInDockerCE(ctx, dockerCli)
 				if err != nil {

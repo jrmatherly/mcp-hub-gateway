@@ -16,9 +16,22 @@ developers to configure and consume MCP servers from the [Docker MCP Catalog](ht
 
 Underneath, the Toolkit is powered by a docker CLI plugin: `docker-mcp`. This repository contains the source code of this CLI plugin. It can work in Docker Desktop or independently.
 
+#### Running Without Docker Desktop
+
+The MCP Gateway can run standalone without Docker Desktop by setting an environment variable:
+
+```bash
+# Set environment variable to skip Docker Desktop check
+# This is only needed if you are running without Docker Desktop and not using Linux
+export DOCKER_MCP_SKIP_DESKTOP_CHECK=1
+
+# Run the gateway
+docker mcp gateway run
+```
+
 The main feature of this CLI is the **Docker MCP Gateway** which allows easy and secure running and deployment of MCP servers.
 
-### MCP Portal (NEW)
+### MCP Portal
 
 The **MCP Portal** is a web-based interface that provides an intuitive way to manage MCP servers through a modern dashboard. It wraps the CLI commands to provide:
 

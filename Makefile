@@ -1,6 +1,10 @@
 MODULE := $(shell sh -c "awk '/^module/ { print \$$2 }' go.mod")
-GIT_TAG ?= $(shell git describe --tags --exact-match HEAD 2>/dev/null || git rev-parse HEAD)
-GO_LDFLAGS = -X $(MODULE)/cmd/docker-mcp/version.Version=$(GIT_TAG)
+VERSION ?= $(shell git describe --tags --exact-match HEAD 2>/dev/null || echo "dev")
+GIT_COMMIT ?= $(shell git rev-parse --short HEAD)
+BUILD_DATE ?= $(shell date -u +'%Y-%m-%dT%H:%M:%SZ')
+GO_LDFLAGS = -X $(MODULE)/cmd/docker-mcp/version.Version=$(VERSION) \
+             -X $(MODULE)/cmd/docker-mcp/version.GitCommit=$(GIT_COMMIT) \
+             -X $(MODULE)/cmd/docker-mcp/version.BuildDate=$(BUILD_DATE)
 
 export DOCKER_MCP_PLUGIN_BINARY ?= docker-mcp
 

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -384,9 +385,14 @@ func (g *Gateway) reloadConfiguration(
 
 	// Resource templates are handled as regular resources in the new SDK
 	for _, template := range capabilities.ResourceTemplates {
+		// Sanitize URI template for validation
+		// The MCP SDK uses url.Parse which doesn't understand RFC 6570 templates
+		// We need to temporarily replace template expressions for validation
+		sanitizedURI := sanitizeURITemplateForValidation(template.ResourceTemplate.URITemplate)
+
 		// Convert ResourceTemplate to Resource
 		resource := &mcp.ResourceTemplate{
-			URITemplate: template.ResourceTemplate.URITemplate,
+			URITemplate: sanitizedURI,
 			Name:        template.ResourceTemplate.Name,
 			Description: template.ResourceTemplate.Description,
 			MIMEType:    template.ResourceTemplate.MIMEType,
@@ -536,4 +542,28 @@ func (g *Gateway) periodicMetricExport(ctx context.Context) {
 			}
 		}
 	}
+}
+
+// sanitizeURITemplateForValidation replaces RFC 6570 URI template expressions
+// with placeholder values so that Go's url.Parse can validate the URI structure.
+// This is a workaround for the MCP SDK using url.Parse which doesn't understand
+// URI template syntax like {+filepath} or {variable}.
+func sanitizeURITemplateForValidation(uriTemplate string) string {
+	// Skip sanitization if it doesn't contain template expressions
+	if !strings.Contains(uriTemplate, "{") {
+		return uriTemplate
+	}
+
+	// Replace RFC 6570 template expressions with placeholders
+	// Pattern matches {+var}, {var}, {?var}, {&var}, {#var}, etc.
+	re := regexp.MustCompile(`\{[+?&#/;.]?[^}]+\}`)
+	sanitized := re.ReplaceAllString(uriTemplate, "placeholder")
+
+	// Special case for file:// URIs with templates
+	// file://{+filepath} becomes file:///placeholder
+	if strings.HasPrefix(sanitized, "file://placeholder") {
+		sanitized = strings.Replace(sanitized, "file://placeholder", "file:///placeholder", 1)
+	}
+
+	return sanitized
 }
