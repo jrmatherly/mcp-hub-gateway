@@ -1,10 +1,13 @@
 *
 !/cmd
+!/cmd/docker-mcp/portal/features
+!/cmd/docker-mcp/portal/oauth
 !/tools/docker-mcp-bridge/**/*
 !/go.mod
 !/go.sum
 !/.golangci.yml
 !/vendor
+!/vendor/**
 !/docs
 !/server.go
 !/test/servers
