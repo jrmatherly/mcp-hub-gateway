@@ -28,7 +28,19 @@ func (r *mockPostgresRepository) CreateCatalog(
 	userID string,
 	catalog *Catalog,
 ) error {
-	return nil
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+
+	query := `INSERT INTO catalogs (id, name, user_id) VALUES ($1, $2, $3)`
+	_, err = tx.ExecContext(ctx, query, catalog.ID, catalog.Name, userID)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func (r *mockPostgresRepository) GetCatalog(
@@ -241,7 +253,7 @@ func TestRepository_CreateCatalog(t *testing.T) {
 			setupMock: func(mock sqlmock.Sqlmock) {
 				mock.ExpectBegin()
 				mock.ExpectExec("INSERT INTO catalogs").
-					WithArgs(sqlmock.AnyArg()).
+					WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
 					WillReturnResult(sqlmock.NewResult(1, 1))
 				mock.ExpectCommit()
 			},

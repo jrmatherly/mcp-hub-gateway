@@ -12,6 +12,7 @@ import (
 	"github.com/jrmatherly/mcp-hub-gateway/cmd/docker-mcp/portal/realtime"
 	"github.com/jrmatherly/mcp-hub-gateway/cmd/docker-mcp/portal/security/audit"
 	"github.com/jrmatherly/mcp-hub-gateway/cmd/docker-mcp/portal/state"
+	"github.com/stretchr/testify/mock"
 )
 
 // TestCreateBulkOperationService tests the creation of a bulk operation service
@@ -19,6 +20,12 @@ func TestCreateBulkOperationService(t *testing.T) {
 	// Create mock dependencies
 	mockCache := &cache.MockCache{}
 	mockExecutor := executor.NewTestableExecutor()
+	// Setup executor mock expectations
+	mockExecutor.On("Execute", mock.Anything, mock.Anything).Return(&executor.ExecutionResult{
+		Success: true,
+		Stdout:  "success",
+	}, nil).Maybe()
+
 	mockStateManager := &state.MockStateManager{}
 	mockRealtimeManager := &realtime.MockConnectionManager{}
 	mockAuditor := audit.NewLogger(audit.NewMemoryStorage())
@@ -113,7 +120,17 @@ func TestCreateBulkOperationService(t *testing.T) {
 func TestBulkOperationRequest(t *testing.T) {
 	// Create mock dependencies
 	mockCache := &cache.MockCache{}
+	// Setup cache mock expectations
+	mockCache.On("Set", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	mockCache.On("Get", mock.Anything, mock.Anything).Return(nil, nil)
+
 	mockExecutor := executor.NewTestableExecutor()
+	// Setup executor mock expectations
+	mockExecutor.On("Execute", mock.Anything, mock.Anything).Return(&executor.ExecutionResult{
+		Success: true,
+		Stdout:  "success",
+	}, nil).Maybe()
+
 	mockStateManager := &state.MockStateManager{}
 	mockRealtimeManager := &realtime.MockConnectionManager{}
 	mockAuditor := audit.NewLogger(audit.NewMemoryStorage())
@@ -230,7 +247,18 @@ func TestOperationStatus(t *testing.T) {
 func TestBatchServerRequest(t *testing.T) {
 	// Create mock dependencies
 	mockCache := &cache.MockCache{}
+	// Setup cache mock expectations
+	mockCache.On("Set", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	mockCache.On("Get", mock.Anything, mock.Anything).Return(nil, nil)
+	mockCache.On("Delete", mock.Anything, mock.Anything).Return(nil)
+
 	mockExecutor := executor.NewTestableExecutor()
+	// Setup executor mock expectations
+	mockExecutor.On("Execute", mock.Anything, mock.Anything).Return(&executor.ExecutionResult{
+		Success: true,
+		Stdout:  "success",
+	}, nil).Maybe()
+
 	mockStateManager := &state.MockStateManager{}
 	mockRealtimeManager := &realtime.MockConnectionManager{}
 	mockAuditor := audit.NewLogger(audit.NewMemoryStorage())

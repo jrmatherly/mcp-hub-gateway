@@ -453,6 +453,8 @@ func TestOAuthInterceptor_InterceptRequest_Success(t *testing.T) {
 		Return(nil)
 	mockRegistry.On("GetProvider", ProviderTypeGitHub).Return(mockProvider, nil)
 	mockProvider.On("SupportsRefresh").Return(false)
+	mockValidator.On("ValidateServerConfig", mock.AnythingOfType("*oauth.ServerConfig")).
+		Return([]ValidationError(nil))
 	mockMetrics.On(
 		"RecordRequest",
 		mock.Anything,
@@ -580,6 +582,8 @@ func TestOAuthInterceptor_InterceptRequest_TokenRefresh(t *testing.T) {
 	mockProvider.On("SupportsRefresh").Return(true)
 	mockProvider.On("RefreshToken", mock.Anything, serverConfig, "refresh-token").
 		Return(refreshedToken, nil)
+	mockValidator.On("ValidateServerConfig", mock.AnythingOfType("*oauth.ServerConfig")).
+		Return([]ValidationError(nil))
 	mockStorage.On("StoreToken", mock.Anything, mock.AnythingOfType("*oauth.TokenData"), mock.AnythingOfType("oauth.StorageTier")).
 		Return(nil)
 	mockMetrics.On("RecordTokenRefresh", mock.Anything, serverName, ProviderTypeGoogle, true)
@@ -707,6 +711,8 @@ func TestOAuthInterceptor_InterceptRequest_401Retry(t *testing.T) {
 	mockProvider.On("SupportsRefresh").Return(true)
 	mockProvider.On("RefreshToken", mock.Anything, serverConfig, "refresh-token").
 		Return(refreshedToken, nil)
+	mockValidator.On("ValidateServerConfig", mock.AnythingOfType("*oauth.ServerConfig")).
+		Return([]ValidationError(nil))
 	mockStorage.On("RefreshToken", mock.Anything, serverName, userID).Return(refreshedToken, nil)
 	mockStorage.On("StoreToken", mock.Anything, mock.AnythingOfType("*oauth.TokenData"), mock.AnythingOfType("oauth.StorageTier")).
 		Return(nil)

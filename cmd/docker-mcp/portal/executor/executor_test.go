@@ -2,6 +2,7 @@ package executor
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -50,11 +51,38 @@ func (m *MockExecutorImpl) ValidateCommand(req *ExecutionRequest) []ValidationEr
 	// Basic validation for testing
 	if req.Command == CommandTypeServerEnable && len(req.Args) > 0 {
 		arg := req.Args[0]
+		// Check for command injection patterns
+		if strings.Contains(arg, ";") || strings.Contains(arg, "&&") ||
+			strings.Contains(arg, "|") ||
+			strings.Contains(arg, "`") ||
+			strings.Contains(arg, "$(") ||
+			strings.Contains(arg, "rm ") {
+			return []ValidationError{{
+				Field:   "server_id",
+				Value:   arg,
+				Message: "invalid server ID format",
+				Code:    "validation_error",
+			}}
+		}
+		// Check for invalid UUID or long strings
 		if len(arg) > 50 || arg == "invalid-uuid" {
 			return []ValidationError{{
 				Field:   "server_id",
 				Value:   arg,
 				Message: "invalid server ID format",
+				Code:    "validation_error",
+			}}
+		}
+	}
+
+	if req.Command == CommandTypeServerInspect && len(req.Args) > 0 {
+		arg := req.Args[0]
+		// Check for path traversal
+		if strings.Contains(arg, "..") || strings.Contains(arg, "/") {
+			return []ValidationError{{
+				Field:   "server_id",
+				Value:   arg,
+				Message: "invalid server identifier",
 				Code:    "validation_error",
 			}}
 		}

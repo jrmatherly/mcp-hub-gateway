@@ -718,6 +718,14 @@ func (w *OAuthExecutorWrapper) handleOAuthList(
 	ctx context.Context,
 	req *executor.ExecutionRequest,
 ) (*executor.ExecutionResult, error) {
+	// Check for context cancellation
+	select {
+	case <-ctx.Done():
+		return w.createErrorResult(req, "request cancelled"), ctx.Err()
+	default:
+	}
+
+	// TODO: Create method to list all registered servers
 	// This would require a method to list all registered servers
 	// For now, return a placeholder
 	result := &executor.ExecutionResult{
@@ -737,7 +745,14 @@ func (w *OAuthExecutorWrapper) handleServerOAuthConnect(
 	ctx context.Context,
 	req *executor.ExecutionRequest,
 ) (*executor.ExecutionResult, error) {
-	// Implementation for connecting to OAuth-protected MCP servers
+	// Check for context cancellation
+	select {
+	case <-ctx.Done():
+		return w.createErrorResult(req, "request cancelled"), ctx.Err()
+	default:
+	}
+
+	// TODO: Implementation for connecting to OAuth-protected MCP servers
 	return w.createErrorResult(req, "OAuth server connect not yet implemented"), nil
 }
 
@@ -806,7 +821,14 @@ func (w *OAuthExecutorWrapper) handleServerOAuthStatus(
 	ctx context.Context,
 	req *executor.ExecutionRequest,
 ) (*executor.ExecutionResult, error) {
-	// Implementation for checking OAuth status of MCP servers
+	// Check for context cancellation
+	select {
+	case <-ctx.Done():
+		return w.createErrorResult(req, "request cancelled"), ctx.Err()
+	default:
+	}
+
+	// TODO: Implementation for checking OAuth status of MCP servers
 	return w.createErrorResult(req, "OAuth server status not yet implemented"), nil
 }
 

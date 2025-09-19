@@ -11,6 +11,7 @@ import (
 	"github.com/jrmatherly/mcp-hub-gateway/cmd/docker-mcp/portal/executor"
 	"github.com/jrmatherly/mcp-hub-gateway/cmd/docker-mcp/portal/realtime"
 	"github.com/jrmatherly/mcp-hub-gateway/cmd/docker-mcp/portal/security/audit"
+	"github.com/stretchr/testify/mock"
 )
 
 // TestCreateStateService tests the creation of a state service
@@ -66,6 +67,12 @@ func TestCreateStateService(t *testing.T) {
 func TestServerStateOperations(t *testing.T) {
 	// Create mock dependencies
 	mockCache := &cache.MockCache{}
+	// Setup cache mock expectations
+	mockCache.On("Get", mock.Anything, mock.Anything).Return([]byte("{}"), nil)
+	mockCache.On("Set", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	mockCache.On("Delete", mock.Anything, mock.Anything).Return(nil)
+	mockCache.On("MultiDelete", mock.Anything, mock.Anything).Return(nil)
+
 	mockExecutor := executor.NewTestableExecutor()
 	mockRealtimeManager := &realtime.MockConnectionManager{}
 	mockAuditor := audit.NewLogger(audit.NewMemoryStorage())
@@ -153,7 +160,15 @@ func TestServerStatusTransitions(t *testing.T) {
 func TestHealthCheckResult(t *testing.T) {
 	// Create mock dependencies
 	mockCache := &cache.MockCache{}
+	// Setup cache mock expectations
+	mockCache.On("Set", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
 	mockExecutor := executor.NewTestableExecutor()
+	// Setup executor mock expectations
+	mockExecutor.On("Execute", mock.Anything, mock.Anything).Return(&executor.ExecutionResult{
+		Success: true,
+		Stdout:  "healthy",
+	}, nil).Maybe()
 	mockRealtimeManager := &realtime.MockConnectionManager{}
 	mockAuditor := audit.NewLogger(audit.NewMemoryStorage())
 	config := DefaultConfig()

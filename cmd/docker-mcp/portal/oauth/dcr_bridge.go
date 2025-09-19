@@ -4,19 +4,26 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
 	"github.com/google/uuid"
 	msgraph "github.com/microsoftgraph/msgraph-sdk-go"
+	graphapplications "github.com/microsoftgraph/msgraph-sdk-go/applications"
 	"github.com/microsoftgraph/msgraph-sdk-go/models"
 )
 
 // AzureADDCRBridge implements Dynamic Client Registration for Azure AD
 type AzureADDCRBridge struct {
 	graphClient    *msgraph.GraphServiceClient
+	credential     *azidentity.ClientSecretCredential
 	tenantID       string
 	subscriptionID string
 	resourceGroup  string
@@ -29,14 +36,38 @@ type AzureADDCRBridge struct {
 func CreateAzureADDCRBridge(
 	tenantID, subscriptionID, resourceGroup, keyVaultURL string,
 ) (*AzureADDCRBridge, error) {
-	// Initialize Azure credentials
-	cred, err := azidentity.NewDefaultAzureCredential(nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create Azure credentials: %w", err)
+	// Initialize Azure credentials - try ClientSecretCredential first for Key Vault access
+	var credential *azidentity.ClientSecretCredential
+	var graphCred azcore.TokenCredential
+	var err error
+
+	// Try to get credentials from environment variables for Key Vault access
+	clientID := os.Getenv("AZURE_CLIENT_ID")
+	clientSecret := os.Getenv("AZURE_CLIENT_SECRET")
+
+	if clientID != "" && clientSecret != "" && tenantID != "" {
+		credential, err = azidentity.NewClientSecretCredential(
+			tenantID,
+			clientID,
+			clientSecret,
+			nil,
+		)
+		if err == nil {
+			graphCred = credential
+		}
+	}
+
+	// Fallback to default credentials if client secret not available
+	if graphCred == nil {
+		defaultCred, err := azidentity.NewDefaultAzureCredential(nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create Azure credentials: %w", err)
+		}
+		graphCred = defaultCred
 	}
 
 	// Create Microsoft Graph client
-	graphClient, err := msgraph.NewGraphServiceClientWithCredentials(cred, []string{
+	graphClient, err := msgraph.NewGraphServiceClientWithCredentials(graphCred, []string{
 		"https://graph.microsoft.com/.default",
 	})
 	if err != nil {
@@ -45,6 +76,7 @@ func CreateAzureADDCRBridge(
 
 	return &AzureADDCRBridge{
 		graphClient:    graphClient,
+		credential:     credential, // May be nil if using default credentials
 		tenantID:       tenantID,
 		subscriptionID: subscriptionID,
 		resourceGroup:  resourceGroup,
@@ -303,7 +335,10 @@ func (b *AzureADDCRBridge) createClientSecret(
 	ctx context.Context,
 	appObjectId string,
 ) (models.PasswordCredentialable, error) {
-	// Create password credential
+	// Create the request body for AddPassword
+	requestBody := graphapplications.NewItemAddPasswordPostRequestBody()
+
+	// Create password credential with a friendly name
 	passwordCredential := models.NewPasswordCredential()
 	displayName := "DCR Generated Secret"
 	passwordCredential.SetDisplayName(&displayName)
@@ -312,19 +347,20 @@ func (b *AzureADDCRBridge) createClientSecret(
 	endDateTime := time.Now().AddDate(2, 0, 0)
 	passwordCredential.SetEndDateTime(&endDateTime)
 
-	// Add password credential to application - simplified for compatibility
-	// Note: This is a stub implementation due to Microsoft Graph SDK API changes
-	// In a real implementation, you would use the correct AddPassword request body
-	_ = passwordCredential // Use variable to avoid unused error
-	credential := models.NewPasswordCredential()
-	credential.SetDisplayName(&displayName)
-	credential.SetEndDateTime(&endDateTime)
-	err := fmt.Errorf("Microsoft Graph SDK AddPassword implementation needed")
+	// Set the password credential in the request body
+	requestBody.SetPasswordCredential(passwordCredential)
+
+	// Call the AddPassword endpoint using the proper Graph SDK v5 method
+	result, err := b.graphClient.Applications().
+		ByApplicationId(appObjectId).
+		AddPassword().
+		Post(ctx, requestBody, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create client secret: %w", err)
+		return nil, fmt.Errorf("failed to add client secret to app %s: %w", appObjectId, err)
 	}
 
-	return credential, nil
+	// The API response contains the generated secret value
+	return result, nil
 }
 
 func (b *AzureADDCRBridge) updateAzureADApplication(
@@ -364,25 +400,92 @@ func (b *AzureADDCRBridge) deleteAzureADApplication(
 	return nil
 }
 
+// storeCredentialsLocally stores credentials in local filesystem as a fallback
+func (b *AzureADDCRBridge) storeCredentialsLocally(
+	ctx context.Context,
+	response *DCRResponse,
+) error {
+	// Check for context cancellation
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
+	// Store in a secure local directory
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("failed to get home directory: %w", err)
+	}
+
+	secretsDir := filepath.Join(homeDir, ".mcp-gateway", "oauth", "secrets")
+	if err := os.MkdirAll(secretsDir, 0o700); err != nil {
+		return fmt.Errorf("failed to create secrets directory: %w", err)
+	}
+
+	// Store credentials in a JSON file
+	filename := filepath.Join(secretsDir, fmt.Sprintf("client-%s.json", response.ClientID))
+	credentialsJSON, err := json.MarshalIndent(response, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal credentials: %w", err)
+	}
+
+	if err := os.WriteFile(filename, credentialsJSON, 0o600); err != nil {
+		return fmt.Errorf("failed to write credentials file: %w", err)
+	}
+
+	return nil
+}
+
 func (b *AzureADDCRBridge) storeCredentialsInKeyVault(
 	ctx context.Context,
 	response *DCRResponse,
 ) error {
-	// This would integrate with Azure Key Vault to store the client credentials
-	// For now, we'll just log that we would store them
+	if b.keyVaultURL == "" {
+		// Fallback to local storage if Key Vault is not configured
+		return b.storeCredentialsLocally(ctx, response)
+	}
+
+	// Create Key Vault secret client
+	client, err := azsecrets.NewClient(b.keyVaultURL, b.credential, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create Key Vault client: %w", err)
+	}
+
+	// Prepare secret value with all credential information
 	credentialsJSON, err := json.Marshal(map[string]interface{}{
 		"client_id":     response.ClientID,
 		"client_secret": response.ClientSecret,
 		"created_at":    time.Unix(response.ClientIDIssuedAt, 0),
 		"expires_at":    time.Unix(response.ClientSecretExpiresAt, 0),
+		"grant_types":   response.GrantTypes,
+		"redirect_uris": response.RedirectURIs,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to marshal credentials: %w", err)
 	}
 
-	// In a real implementation, this would store in Key Vault
-	_ = credentialsJSON
-	fmt.Printf("Would store credentials in Key Vault for client %s\n", response.ClientID)
+	// Store in Key Vault with appropriate naming
+	secretName := fmt.Sprintf("oauth-client-%s", response.ClientID)
+	secretValue := string(credentialsJSON)
+	expiresOn := time.Unix(response.ClientSecretExpiresAt, 0)
+
+	_, err = client.SetSecret(ctx, secretName, azsecrets.SetSecretParameters{
+		Value: &secretValue,
+		SecretAttributes: &azsecrets.SecretAttributes{
+			Enabled:   to.Ptr(true),
+			NotBefore: to.Ptr(time.Now()),
+			Expires:   &expiresOn,
+		},
+		Tags: map[string]*string{
+			"client_name": &response.ClientName,
+			"provider":    to.Ptr("azure_ad"),
+			"created_by":  to.Ptr("dcr_bridge"),
+		},
+	}, nil)
+	if err != nil {
+		return fmt.Errorf("failed to store credentials in Key Vault: %w", err)
+	}
 
 	return nil
 }

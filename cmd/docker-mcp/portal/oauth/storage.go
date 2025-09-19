@@ -395,17 +395,48 @@ func (h *HierarchicalTokenStorage) cleanupExpiredTokensFromTier(
 	tier StorageTier,
 	now time.Time,
 ) (int, error) {
-	// Implementation would depend on tier capabilities
-	return 0, nil
+	// Check for context cancellation
+	select {
+	case <-ctx.Done():
+		return 0, ctx.Err()
+	default:
+	}
+
+	// Implementation depends on tier capabilities
+	switch tier {
+	case StorageTierKeyVault:
+		// Key Vault manages expiration automatically
+		// The `now` parameter would be used for manual expiration checks
+		_ = now // Currently not needed for Key Vault
+		return 0, nil
+	case StorageTierDockerDesktop:
+		// TODO: Implement file-based cleanup for Docker Desktop storage
+		// Would scan files and remove those with expired tokens before `now`
+		_ = now // TODO: Use for expiration comparison when implemented
+		return 0, nil
+	case StorageTierEnvironment:
+		// Environment variables cannot be cleaned up programmatically
+		_ = now // Not applicable for environment variables
+		return 0, nil
+	default:
+		return 0, fmt.Errorf("unknown storage tier: %d", tier)
+	}
 }
 
 func (h *HierarchicalTokenStorage) healthCheckTier(ctx context.Context, tier StorageTier) error {
+	// Check for context cancellation
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
 	switch tier {
 	case StorageTierKeyVault:
 		if h.keyVaultClient == nil {
 			return fmt.Errorf("Key Vault client not initialized")
 		}
-		// Could ping Key Vault here
+		// TODO: Could ping Key Vault here using ctx for timeout
 		return nil
 	case StorageTierDockerDesktop:
 		if h.dockerDesktopPath == "" {
@@ -487,13 +518,24 @@ func (h *HierarchicalTokenStorage) listTokensFromKeyVault(
 	ctx context.Context,
 	userID uuid.UUID,
 ) ([]*TokenData, error) {
+	// Check for context cancellation
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
+
 	if h.keyVaultClient == nil {
 		return nil, fmt.Errorf("Key Vault client not available")
 	}
 
-	// This would require listing secrets and filtering by user ID
+	// TODO: Implement Key Vault secret listing with user ID filtering
 	// Azure Key Vault doesn't have great filtering capabilities
-	// In practice, might need to maintain an index
+	// Would need to list all secrets and filter by naming convention
+	// Pattern: "oauth-token-{serverName}-{userID}"
+	userIDStr := userID.String()
+	_ = userIDStr // TODO: Use for filtering when implemented
+
 	return []*TokenData{}, nil
 }
 
@@ -502,6 +544,13 @@ func (h *HierarchicalTokenStorage) storeTokenInDockerDesktop(
 	ctx context.Context,
 	token *TokenData,
 ) error {
+	// Check for context cancellation
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
 	if h.dockerDesktopPath == "" {
 		return fmt.Errorf("Docker Desktop path not available")
 	}
@@ -527,6 +576,13 @@ func (h *HierarchicalTokenStorage) getTokenFromDockerDesktop(
 	serverName string,
 	userID uuid.UUID,
 ) (*TokenData, error) {
+	// Check for context cancellation
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
+
 	if h.dockerDesktopPath == "" {
 		return nil, fmt.Errorf("Docker Desktop path not available")
 	}
@@ -552,6 +608,13 @@ func (h *HierarchicalTokenStorage) deleteTokenFromDockerDesktop(
 	serverName string,
 	userID uuid.UUID,
 ) error {
+	// Check for context cancellation
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
 	if h.dockerDesktopPath == "" {
 		return fmt.Errorf("Docker Desktop path not available")
 	}
@@ -566,6 +629,13 @@ func (h *HierarchicalTokenStorage) listTokensFromDockerDesktop(
 	ctx context.Context,
 	userID uuid.UUID,
 ) ([]*TokenData, error) {
+	// Check for context cancellation
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
+
 	if h.dockerDesktopPath == "" {
 		return nil, fmt.Errorf("Docker Desktop path not available")
 	}
@@ -606,8 +676,16 @@ func (h *HierarchicalTokenStorage) storeTokenInEnvironment(
 	ctx context.Context,
 	token *TokenData,
 ) error {
+	// Check for context cancellation
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
 	// Environment variables are read-only in this context
 	// This would typically be used only for reading pre-configured tokens
+	_ = token // Environment storage not supported, but parameter is part of interface
 	return fmt.Errorf("storing tokens in environment variables not supported")
 }
 
@@ -616,6 +694,13 @@ func (h *HierarchicalTokenStorage) getTokenFromEnvironment(
 	serverName string,
 	userID uuid.UUID,
 ) (*TokenData, error) {
+	// Check for context cancellation
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
+
 	// Look for environment variables in the format:
 	// OAUTH_TOKEN_{SERVER_NAME}_{USER_ID}
 	envKey := fmt.Sprintf("OAUTH_TOKEN_%s_%s",
@@ -641,7 +726,17 @@ func (h *HierarchicalTokenStorage) deleteTokenFromEnvironment(
 	serverName string,
 	userID uuid.UUID,
 ) error {
+	// Check for context cancellation
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
 	// Can't delete environment variables at runtime
+	// Parameters kept to maintain interface compliance
+	_ = serverName
+	_ = userID
 	return fmt.Errorf("deleting tokens from environment variables not supported")
 }
 
@@ -649,6 +744,13 @@ func (h *HierarchicalTokenStorage) listTokensFromEnvironment(
 	ctx context.Context,
 	userID uuid.UUID,
 ) ([]*TokenData, error) {
+	// Check for context cancellation
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
+
 	// Scan environment variables for OAuth tokens
 	var tokens []*TokenData
 	userIDStr := strings.ReplaceAll(userID.String(), "-", "_")
