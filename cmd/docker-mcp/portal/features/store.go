@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
-
-	"github.com/jrmatherly/mcp-hub-gateway/cmd/docker-mcp/portal/database"
 )
 
 // DatabaseAdapter provides a compatibility layer between database interfaces
@@ -39,17 +37,29 @@ func (d *DatabaseAdapter) Health(ctx context.Context) error {
 type DatabaseConnection struct{}
 
 // Query executes a query
-func (d *DatabaseConnection) Query(ctx context.Context, sql string, args ...interface{}) (interface{}, error) {
+func (d *DatabaseConnection) Query(
+	ctx context.Context,
+	sql string,
+	args ...interface{},
+) (interface{}, error) {
 	return &DatabaseRows{}, nil
 }
 
 // QueryRow executes a single row query
-func (d *DatabaseConnection) QueryRow(ctx context.Context, sql string, args ...interface{}) interface{} {
+func (d *DatabaseConnection) QueryRow(
+	ctx context.Context,
+	sql string,
+	args ...interface{},
+) interface{} {
 	return &DatabaseRow{}
 }
 
 // Exec executes a command
-func (d *DatabaseConnection) Exec(ctx context.Context, sql string, args ...interface{}) (interface{}, error) {
+func (d *DatabaseConnection) Exec(
+	ctx context.Context,
+	sql string,
+	args ...interface{},
+) (interface{}, error) {
 	return &DatabaseResult{}, nil
 }
 
@@ -154,9 +164,12 @@ func (s *databaseFlagStore) SaveFlag(ctx context.Context, flag *FlagDefinition) 
 	}
 
 	// In a real implementation, this would execute an INSERT/UPDATE statement
-	_, err = conn.(*DatabaseConnection).Exec(ctx,
+	_, err = conn.(*DatabaseConnection).Exec(
+		ctx,
 		"INSERT INTO flags (name, definition) VALUES ($1, $2) ON CONFLICT (name) DO UPDATE SET definition = $2",
-		string(flag.Name), string(flagJSON))
+		string(flag.Name),
+		string(flagJSON),
+	)
 	if err != nil {
 		return fmt.Errorf("failed to save flag: %w", err)
 	}
@@ -219,12 +232,12 @@ func (s *databaseFlagStore) GetConfiguration(ctx context.Context) (*FlagConfigur
 			EvaluationTimeout:        time.Second * 1,
 			DefaultRolloutPercentage: 0,
 			DefaultRolloutStrategy:   RolloutPercentage,
-			MetricsEnabled:          true,
-			MetricsInterval:         time.Minute * 1,
-			TrackingEnabled:         true,
-			FailureMode:             "fail_closed",
-			MaxEvaluationTime:       time.Second * 2,
-			CircuitBreakerEnabled:   true,
+			MetricsEnabled:           true,
+			MetricsInterval:          time.Minute * 1,
+			TrackingEnabled:          true,
+			FailureMode:              "fail_closed",
+			MaxEvaluationTime:        time.Second * 2,
+			CircuitBreakerEnabled:    true,
 		},
 		Flags:       make(map[FlagName]*FlagDefinition),
 		Groups:      make(map[string]*FlagGroup),
@@ -236,7 +249,10 @@ func (s *databaseFlagStore) GetConfiguration(ctx context.Context) (*FlagConfigur
 }
 
 // SaveConfiguration saves the full flag configuration
-func (s *databaseFlagStore) SaveConfiguration(ctx context.Context, config *FlagConfiguration) error {
+func (s *databaseFlagStore) SaveConfiguration(
+	ctx context.Context,
+	config *FlagConfiguration,
+) error {
 	if config == nil {
 		return fmt.Errorf("configuration is required")
 	}
@@ -258,9 +274,11 @@ func (s *databaseFlagStore) SaveConfiguration(ctx context.Context, config *FlagC
 	}
 
 	// In a real implementation, this would save the configuration to database
-	_, err = conn.(*DatabaseConnection).Exec(ctx,
+	_, err = conn.(*DatabaseConnection).Exec(
+		ctx,
 		"INSERT INTO flag_configurations (id, configuration) VALUES ('default', $1) ON CONFLICT (id) DO UPDATE SET configuration = $1",
-		string(configJSON))
+		string(configJSON),
+	)
 	if err != nil {
 		return fmt.Errorf("failed to save configuration: %w", err)
 	}
@@ -318,9 +336,12 @@ func (s *databaseFlagStore) SaveExperiment(ctx context.Context, experiment *Expe
 	}
 
 	// In a real implementation, this would execute an INSERT/UPDATE statement
-	_, err = conn.(*DatabaseConnection).Exec(ctx,
+	_, err = conn.(*DatabaseConnection).Exec(
+		ctx,
 		"INSERT INTO experiments (id, definition) VALUES ($1, $2) ON CONFLICT (id) DO UPDATE SET definition = $2",
-		experiment.ID, string(experimentJSON))
+		experiment.ID,
+		string(experimentJSON),
+	)
 	if err != nil {
 		return fmt.Errorf("failed to save experiment: %w", err)
 	}
@@ -329,7 +350,10 @@ func (s *databaseFlagStore) SaveExperiment(ctx context.Context, experiment *Expe
 }
 
 // ListExperiments returns experiments by status
-func (s *databaseFlagStore) ListExperiments(ctx context.Context, status string) ([]*Experiment, error) {
+func (s *databaseFlagStore) ListExperiments(
+	ctx context.Context,
+	status string,
+) ([]*Experiment, error) {
 	conn, err := s.adapter.Get(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get database connection: %w", err)

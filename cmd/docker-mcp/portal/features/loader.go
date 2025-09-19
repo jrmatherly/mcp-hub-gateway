@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jrmatherly/mcp-hub-gateway/cmd/docker-mcp/portal/database"
+	//"github.com/jrmatherly/mcp-hub-gateway/cmd/docker-mcp/portal/database"
 	"gopkg.in/yaml.v3"
 )
 
@@ -133,73 +133,6 @@ func (l *configurationLoader) LoadFromDatabase(ctx context.Context) (*FlagConfig
 	// For now, return a default configuration since we're using mock adapters
 	// In a real implementation, this would use the actual database connection
 	return l.createDefaultDatabaseConfiguration(ctx)
-
-	// Load configuration from database
-	query := `
-		SELECT
-			version,
-			configuration,
-			created_at,
-			updated_at
-		FROM feature_flag_configuration
-		WHERE active = true
-		ORDER BY version DESC
-		LIMIT 1
-	`
-
-	var version int
-	var configData []byte
-	var createdAt, updatedAt time.Time
-
-	err = conn.QueryRow(ctx, query).Scan(&version, &configData, &createdAt, &updatedAt)
-	if err != nil {
-		// If no configuration exists, create a default one
-		if err.Error() == "no rows in result set" {
-			return l.createDefaultDatabaseConfiguration(ctx)
-		}
-		return nil, fmt.Errorf("failed to load configuration from database: %w", err)
-	}
-
-	// Parse configuration
-	var config FlagConfiguration
-	if err := json.Unmarshal(configData, &config); err != nil {
-		return nil, fmt.Errorf("failed to parse database configuration: %w", err)
-	}
-
-	// Set metadata
-	config.Version = version
-	config.LoadedAt = time.Now()
-	config.LoadedFrom = SourceDatabase
-
-	// Load individual flags from database
-	flags, err := l.loadFlagsFromDatabase(ctx, conn)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load flags from database: %w", err)
-	}
-
-	if config.Flags == nil {
-		config.Flags = make(map[FlagName]*FlagDefinition)
-	}
-
-	for _, flag := range flags {
-		config.Flags[flag.Name] = flag
-	}
-
-	// Load experiments from database
-	experiments, err := l.loadExperimentsFromDatabase(ctx, conn)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load experiments from database: %w", err)
-	}
-
-	if config.Experiments == nil {
-		config.Experiments = make(map[string]*Experiment)
-	}
-
-	for _, experiment := range experiments {
-		config.Experiments[experiment.ID] = experiment
-	}
-
-	return &config, nil
 }
 
 // LoadFromHTTP loads configuration from an HTTP endpoint
@@ -505,6 +438,7 @@ func (l *configurationLoader) loadCustomFlagsFromEnv() map[FlagName]*FlagDefinit
 func (l *configurationLoader) createDefaultDatabaseConfiguration(
 	ctx context.Context,
 ) (*FlagConfiguration, error) {
+	_ = ctx // Context reserved for future use (logging, metrics)
 	config := &FlagConfiguration{
 		Version:     1,
 		LoadedAt:    time.Now(),
@@ -536,9 +470,13 @@ func (l *configurationLoader) createDefaultDatabaseConfiguration(
 	return config, nil
 }
 
+// TODO: Implement database integration for flag loading
+// loadFlagsFromDatabase is a stub implementation for future database integration
+// Currently unused as the system uses mock adapters, but preserved for future enhancement
+/*
 func (l *configurationLoader) loadFlagsFromDatabase(
 	ctx context.Context,
-	conn interface{},
+	conn *database.Pool,
 ) ([]*FlagDefinition, error) {
 	query := `
 		SELECT
@@ -563,7 +501,13 @@ func (l *configurationLoader) loadFlagsFromDatabase(
 		ORDER BY name
 	`
 
-	rows, err := conn.Query(ctx, query)
+	dbconn, err := conn.GetPool().Acquire(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to acquire connection: %w", err)
+	}
+	defer dbconn.Release()
+
+	rows, err := dbconn.Query(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query flags: %w", err)
 	}
@@ -655,10 +599,15 @@ func (l *configurationLoader) loadFlagsFromDatabase(
 
 	return flags, nil
 }
+*/
 
+// TODO: Implement database integration for experiment loading
+// loadExperimentsFromDatabase is a stub implementation for future database integration
+// Currently unused as the system uses mock adapters, but preserved for future enhancement
+/*
 func (l *configurationLoader) loadExperimentsFromDatabase(
 	ctx context.Context,
-	conn database.Connection,
+	conn *database.Pool,
 ) ([]*Experiment, error) {
 	query := `
 		SELECT
@@ -684,7 +633,13 @@ func (l *configurationLoader) loadExperimentsFromDatabase(
 		ORDER BY created_at DESC
 	`
 
-	rows, err := conn.Query(ctx, query)
+	dbconn, err := conn.GetPool().Acquire(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to acquire connection: %w", err)
+	}
+	defer dbconn.Release()
+
+	rows, err := dbconn.Query(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query experiments: %w", err)
 	}
@@ -778,6 +733,7 @@ func (l *configurationLoader) loadExperimentsFromDatabase(
 
 	return experiments, nil
 }
+*/
 
 // Utility functions for parsing environment variables
 

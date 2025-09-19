@@ -17,16 +17,16 @@ import (
 // experimentManager manages A/B testing experiments
 type experimentManager struct {
 	// Dependencies
-	dbPool       database.Pool
-	flagManager  FlagManager
-	auditor      audit.Logger
+	dbPool      *database.Pool
+	flagManager FlagManager
+	auditor     audit.Logger
 
 	// Active experiments cache
 	activeExperiments map[string]*Experiment
 	experimentsMu     sync.RWMutex
 
 	// Participant tracking
-	participants map[string]map[string]string // experimentID -> userID -> variant
+	participants   map[string]map[string]string // experimentID -> userID -> variant
 	participantsMu sync.RWMutex
 
 	// Background workers
@@ -54,7 +54,11 @@ type ExperimentManager interface {
 
 	// Participant management
 	AssignParticipant(ctx context.Context, experimentID string, userID uuid.UUID) (string, error)
-	GetParticipantVariant(ctx context.Context, experimentID string, userID uuid.UUID) (string, error)
+	GetParticipantVariant(
+		ctx context.Context,
+		experimentID string,
+		userID uuid.UUID,
+	) (string, error)
 	GetExperimentParticipants(ctx context.Context, experimentID string) (map[string]string, error)
 
 	// Results and analysis
@@ -68,7 +72,7 @@ type ExperimentManager interface {
 
 // CreateExperimentManager creates a new experiment manager
 func CreateExperimentManager(
-	dbPool database.Pool,
+	dbPool *database.Pool,
 	flagManager FlagManager,
 	auditor audit.Logger,
 ) (ExperimentManager, error) {
@@ -131,10 +135,10 @@ func (e *experimentManager) CreateExperiment(ctx context.Context, experiment *Ex
 
 	// Audit log
 	e.auditor.Log(ctx, audit.ActionCreate, "experiment", experiment.ID, "system", map[string]any{
-		"name":              experiment.Name,
-		"flag":              experiment.Flag,
+		"name":               experiment.Name,
+		"flag":               experiment.Flag,
 		"traffic_allocation": experiment.TrafficAllocation,
-		"variant_count":     len(experiment.Variants),
+		"variant_count":      len(experiment.Variants),
 	})
 
 	return nil
@@ -316,7 +320,7 @@ func (e *experimentManager) StopExperiment(ctx context.Context, experimentID str
 
 	// Audit log
 	e.auditor.Log(ctx, audit.ActionUpdate, "experiment", experimentID, "system", map[string]any{
-		"action":            "stop_experiment",
+		"action":             "stop_experiment",
 		"total_participants": results.TotalParticipants,
 		"significant_winner": results.SignificantWinner,
 	})
@@ -325,7 +329,10 @@ func (e *experimentManager) StopExperiment(ctx context.Context, experimentID str
 }
 
 // GetExperiment retrieves an experiment by ID
-func (e *experimentManager) GetExperiment(ctx context.Context, experimentID string) (*Experiment, error) {
+func (e *experimentManager) GetExperiment(
+	ctx context.Context,
+	experimentID string,
+) (*Experiment, error) {
 	// Check active experiments cache first
 	e.experimentsMu.RLock()
 	if experiment, exists := e.activeExperiments[experimentID]; exists {
@@ -344,8 +351,11 @@ func (e *experimentManager) GetExperiment(ctx context.Context, experimentID stri
 }
 
 // ListExperiments lists experiments by status
-func (e *experimentManager) ListExperiments(ctx context.Context, status string) ([]*Experiment, error) {
-	conn, err := e.dbPool.Get(ctx)
+func (e *experimentManager) ListExperiments(
+	ctx context.Context,
+	status string,
+) ([]*Experiment, error) {
+	conn, err := e.dbPool.GetPool().Acquire(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get database connection: %w", err)
 	}
@@ -403,7 +413,7 @@ func (e *experimentManager) DeleteExperiment(ctx context.Context, experimentID s
 		return fmt.Errorf("cannot delete running experiment")
 	}
 
-	conn, err := e.dbPool.Get(ctx)
+	conn, err := e.dbPool.GetPool().Acquire(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get database connection: %w", err)
 	}
@@ -443,7 +453,11 @@ func (e *experimentManager) DeleteExperiment(ctx context.Context, experimentID s
 }
 
 // AssignParticipant assigns a user to an experiment variant
-func (e *experimentManager) AssignParticipant(ctx context.Context, experimentID string, userID uuid.UUID) (string, error) {
+func (e *experimentManager) AssignParticipant(
+	ctx context.Context,
+	experimentID string,
+	userID uuid.UUID,
+) (string, error) {
 	// Check if already assigned
 	e.participantsMu.RLock()
 	if participants, exists := e.participants[experimentID]; exists {
@@ -508,7 +522,11 @@ func (e *experimentManager) AssignParticipant(ctx context.Context, experimentID 
 }
 
 // GetParticipantVariant gets the assigned variant for a user
-func (e *experimentManager) GetParticipantVariant(ctx context.Context, experimentID string, userID uuid.UUID) (string, error) {
+func (e *experimentManager) GetParticipantVariant(
+	ctx context.Context,
+	experimentID string,
+	userID uuid.UUID,
+) (string, error) {
 	e.participantsMu.RLock()
 	defer e.participantsMu.RUnlock()
 
@@ -526,7 +544,10 @@ func (e *experimentManager) GetParticipantVariant(ctx context.Context, experimen
 }
 
 // GetExperimentParticipants gets all participants for an experiment
-func (e *experimentManager) GetExperimentParticipants(ctx context.Context, experimentID string) (map[string]string, error) {
+func (e *experimentManager) GetExperimentParticipants(
+	ctx context.Context,
+	experimentID string,
+) (map[string]string, error) {
 	e.participantsMu.RLock()
 	defer e.participantsMu.RUnlock()
 
@@ -545,7 +566,10 @@ func (e *experimentManager) GetExperimentParticipants(ctx context.Context, exper
 }
 
 // CalculateResults calculates experiment results with statistical analysis
-func (e *experimentManager) CalculateResults(ctx context.Context, experimentID string) (*ExperimentResults, error) {
+func (e *experimentManager) CalculateResults(
+	ctx context.Context,
+	experimentID string,
+) (*ExperimentResults, error) {
 	experiment, err := e.GetExperiment(ctx, experimentID)
 	if err != nil {
 		return nil, fmt.Errorf("experiment not found: %w", err)
@@ -624,9 +648,9 @@ func (e *experimentManager) CalculateResults(ctx context.Context, experimentID s
 		VariantCounts:     variantCounts,
 		MetricResults:     metricResults,
 		ConfidenceLevel:   confidenceLevel,
-		PValue:           pValue,
+		PValue:            pValue,
 		SignificantWinner: significantWinner,
-		AnalyzedAt:       time.Now(),
+		AnalyzedAt:        time.Now(),
 	}
 
 	// Set data window
@@ -641,7 +665,10 @@ func (e *experimentManager) CalculateResults(ctx context.Context, experimentID s
 }
 
 // GetExperimentMetrics gets detailed metrics for an experiment
-func (e *experimentManager) GetExperimentMetrics(ctx context.Context, experimentID string) (map[string]*MetricResult, error) {
+func (e *experimentManager) GetExperimentMetrics(
+	ctx context.Context,
+	experimentID string,
+) (map[string]*MetricResult, error) {
 	results, err := e.CalculateResults(ctx, experimentID)
 	if err != nil {
 		return nil, err
@@ -651,7 +678,11 @@ func (e *experimentManager) GetExperimentMetrics(ctx context.Context, experiment
 }
 
 // ExportResults exports experiment results in the specified format
-func (e *experimentManager) ExportResults(ctx context.Context, experimentID string, format string) ([]byte, error) {
+func (e *experimentManager) ExportResults(
+	ctx context.Context,
+	experimentID string,
+	format string,
+) ([]byte, error) {
 	results, err := e.CalculateResults(ctx, experimentID)
 	if err != nil {
 		return nil, err
@@ -670,7 +701,7 @@ func (e *experimentManager) ExportResults(ctx context.Context, experimentID stri
 // Health checks the health of the experiment manager
 func (e *experimentManager) Health(ctx context.Context) error {
 	// Check database connection
-	conn, err := e.dbPool.Get(ctx)
+	conn, err := e.dbPool.GetPool().Acquire(ctx)
 	if err != nil {
 		return fmt.Errorf("database connection failed: %w", err)
 	}
@@ -743,7 +774,7 @@ func (e *experimentManager) loadActiveExperiments(ctx context.Context) error {
 }
 
 func (e *experimentManager) saveExperiment(ctx context.Context, experiment *Experiment) error {
-	conn, err := e.dbPool.Get(ctx)
+	conn, err := e.dbPool.GetPool().Acquire(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get database connection: %w", err)
 	}
@@ -805,7 +836,6 @@ func (e *experimentManager) saveExperiment(ctx context.Context, experiment *Expe
 		experiment.UpdatedAt,
 		experiment.CreatedBy,
 	)
-
 	if err != nil {
 		return fmt.Errorf("failed to save experiment: %w", err)
 	}
@@ -813,8 +843,11 @@ func (e *experimentManager) saveExperiment(ctx context.Context, experiment *Expe
 	return nil
 }
 
-func (e *experimentManager) loadExperiment(ctx context.Context, experimentID string) (*Experiment, error) {
-	conn, err := e.dbPool.Get(ctx)
+func (e *experimentManager) loadExperiment(
+	ctx context.Context,
+	experimentID string,
+) (*Experiment, error) {
+	conn, err := e.dbPool.GetPool().Acquire(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get database connection: %w", err)
 	}
@@ -834,7 +867,9 @@ func (e *experimentManager) loadExperiment(ctx context.Context, experimentID str
 	return e.scanExperiment(row)
 }
 
-func (e *experimentManager) scanExperiment(row interface{ Scan(...interface{}) error }) (*Experiment, error) {
+func (e *experimentManager) scanExperiment(
+	row interface{ Scan(...interface{}) error },
+) (*Experiment, error) {
 	var experiment Experiment
 	var variantsJSON, audienceFilterJSON, secondaryMetricsJSON, resultsJSON []byte
 	var endTime *time.Time
@@ -912,7 +947,10 @@ func (e *experimentManager) isUserInTrafficAllocation(userID uuid.UUID, allocati
 	return bucket < allocation
 }
 
-func (e *experimentManager) matchesAudienceFilter(filter *AudienceFilter, evalCtx *EvaluationContext) bool {
+func (e *experimentManager) matchesAudienceFilter(
+	filter *AudienceFilter,
+	evalCtx *EvaluationContext,
+) bool {
 	// Simplified audience filtering
 	// In practice, you'd implement comprehensive filtering logic
 
@@ -971,10 +1009,15 @@ func (e *experimentManager) generateUserHash(userID string) int {
 	return hash
 }
 
-func (e *experimentManager) storeParticipantAssignment(ctx context.Context, experimentID string, userID uuid.UUID, variant string) {
+func (e *experimentManager) storeParticipantAssignment(
+	ctx context.Context,
+	experimentID string,
+	userID uuid.UUID,
+	variant string,
+) {
 	// Store participant assignment in database for persistence
 	// This is a simplified implementation
-	conn, err := e.dbPool.Get(ctx)
+	conn, err := e.dbPool.GetPool().Acquire(ctx)
 	if err != nil {
 		return
 	}
@@ -989,18 +1032,28 @@ func (e *experimentManager) storeParticipantAssignment(ctx context.Context, expe
 	conn.Exec(ctx, query, experimentID, userID, variant)
 }
 
-func (e *experimentManager) calculateConversionRate(ctx context.Context, experimentID, variant string) float64 {
+func (e *experimentManager) calculateConversionRate(
+	ctx context.Context,
+	experimentID, variant string,
+) float64 {
+	_ = ctx // Context reserved for future use (metrics, logging)
 	// Simplified conversion rate calculation
 	// In practice, you'd integrate with your analytics system
 	return 0.1 + float64(e.generateUserHash(experimentID+variant)%20)/100.0
 }
 
-func (e *experimentManager) calculateMetricRate(ctx context.Context, experimentID, variant, metric string) float64 {
+func (e *experimentManager) calculateMetricRate(
+	ctx context.Context,
+	experimentID, variant, metric string,
+) float64 {
+	_ = ctx // Context reserved for future use (metrics, logging)
 	// Simplified metric calculation
 	return 0.05 + float64(e.generateUserHash(experimentID+variant+metric)%15)/100.0
 }
 
-func (e *experimentManager) determineWinner(variantResults map[string]*VariantResult) (string, float64) {
+func (e *experimentManager) determineWinner(
+	variantResults map[string]*VariantResult,
+) (string, float64) {
 	// Simplified winner determination
 	var bestVariant string
 	var bestRate float64

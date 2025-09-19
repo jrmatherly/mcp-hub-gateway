@@ -7,25 +7,24 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jrmatherly/mcp-hub-gateway/cmd/docker-mcp/portal/cache"
 	"github.com/jrmatherly/mcp-hub-gateway/cmd/docker-mcp/portal/security/audit"
 )
 
 // flagManager implements the FlagManager interface
 type flagManager struct {
 	// Dependencies
-	store     FlagStore
-	engine    EvaluationEngine
-	cache     CacheProvider
-	metrics   MetricsCollector
-	loader    ConfigurationLoader
-	auditor   audit.Logger
+	store   FlagStore
+	engine  EvaluationEngine
+	cache   CacheProvider
+	metrics MetricsCollector
+	loader  ConfigurationLoader
+	auditor audit.Logger
 
 	// Configuration
-	config      *FlagConfiguration
-	configMu    sync.RWMutex
-	lastReload  time.Time
-	autoReload  bool
+	config         *FlagConfiguration
+	configMu       sync.RWMutex
+	lastReload     time.Time
+	autoReload     bool
 	reloadInterval time.Duration
 
 	// Background workers
@@ -33,7 +32,7 @@ type flagManager struct {
 	wg       sync.WaitGroup
 
 	// Event handlers
-	handlers []EventHandler
+	handlers   []EventHandler
 	handlersMu sync.RWMutex
 
 	// Circuit breaker for evaluation safety
@@ -46,8 +45,8 @@ type CircuitBreaker struct {
 	resetTimeout     time.Duration
 	failures         int
 	lastFailureTime  time.Time
-	state           string // "closed", "open", "half-open"
-	mu              sync.RWMutex
+	state            string // "closed", "open", "half-open"
+	mu               sync.RWMutex
 }
 
 // CreateFlagManager creates a new feature flag manager
@@ -92,7 +91,7 @@ func CreateFlagManager(
 		circuitBreaker: &CircuitBreaker{
 			failureThreshold: 10,
 			resetTimeout:     time.Minute * 2,
-			state:           "closed",
+			state:            "closed",
 		},
 	}
 
@@ -125,7 +124,15 @@ func (m *flagManager) EvaluateFlag(
 	cacheKey := m.buildCacheKey(flag, evalCtx)
 	if cachedValue, err := m.cache.Get(ctx, cacheKey); err == nil {
 		cachedValue.CacheHit = true
-		m.recordEvaluation(ctx, flag, cachedValue, evalCtx, evaluationID, time.Since(startTime), true)
+		m.recordEvaluation(
+			ctx,
+			flag,
+			cachedValue,
+			evalCtx,
+			evaluationID,
+			time.Since(startTime),
+			true,
+		)
 		return cachedValue, nil
 	}
 
@@ -272,11 +279,18 @@ func (m *flagManager) CreateFlag(ctx context.Context, flag *FlagDefinition) erro
 	m.invalidateFlagCache(ctx, flag.Name)
 
 	// Audit log
-	m.auditor.Log(ctx, audit.ActionCreate, "feature_flag", string(flag.Name), "system", map[string]any{
-		"type":        flag.Type,
-		"enabled":     flag.Enabled,
-		"description": flag.Description,
-	})
+	m.auditor.Log(
+		ctx,
+		audit.ActionCreate,
+		"feature_flag",
+		string(flag.Name),
+		"system",
+		map[string]any{
+			"type":        flag.Type,
+			"enabled":     flag.Enabled,
+			"description": flag.Description,
+		},
+	)
 
 	// Trigger events
 	m.notifyFlagChanged(ctx, flag, nil)
@@ -321,11 +335,18 @@ func (m *flagManager) UpdateFlag(ctx context.Context, flag *FlagDefinition) erro
 	m.invalidateFlagCache(ctx, flag.Name)
 
 	// Audit log
-	m.auditor.Log(ctx, audit.ActionUpdate, "feature_flag", string(flag.Name), "system", map[string]any{
-		"old_enabled": oldFlag.Enabled,
-		"new_enabled": flag.Enabled,
-		"version":     flag.Version,
-	})
+	m.auditor.Log(
+		ctx,
+		audit.ActionUpdate,
+		"feature_flag",
+		string(flag.Name),
+		"system",
+		map[string]any{
+			"old_enabled": oldFlag.Enabled,
+			"new_enabled": flag.Enabled,
+			"version":     flag.Version,
+		},
+	)
 
 	// Trigger events
 	m.notifyFlagChanged(ctx, flag, oldFlag)
@@ -575,6 +596,7 @@ func (m *flagManager) Health(ctx context.Context) error {
 // Helper methods
 
 func (m *flagManager) getFlag(ctx context.Context, name FlagName) (*FlagDefinition, error) {
+	_ = ctx // Context reserved for future use (logging, tracing)
 	m.configMu.RLock()
 	flag, exists := m.config.Flags[name]
 	m.configMu.RUnlock()
@@ -695,8 +717,9 @@ func (m *flagManager) buildCacheKey(flag FlagName, evalCtx *EvaluationContext) s
 	return key
 }
 
-func (m *flagManager) getCacheTTL(flag *FlagDefinition) time.Duration {
-	// Default TTL
+func (m *flagManager) getCacheTTL(_flag *FlagDefinition) time.Duration {
+	// Default TTL (flag parameter reserved for future flag-specific TTL logic)
+	_ = _flag // Parameter reserved for future flag-specific TTL implementation
 	defaultTTL := time.Minute * 5
 
 	m.configMu.RLock()
@@ -795,12 +818,12 @@ func (m *flagManager) createDefaultConfiguration() *FlagConfiguration {
 			EvaluationTimeout:        time.Second * 1,
 			DefaultRolloutPercentage: 0,
 			DefaultRolloutStrategy:   RolloutPercentage,
-			MetricsEnabled:          true,
-			MetricsInterval:         time.Minute * 1,
-			TrackingEnabled:         true,
-			FailureMode:             "fail_closed",
-			MaxEvaluationTime:       time.Second * 2,
-			CircuitBreakerEnabled:   true,
+			MetricsEnabled:           true,
+			MetricsInterval:          time.Minute * 1,
+			TrackingEnabled:          true,
+			FailureMode:              "fail_closed",
+			MaxEvaluationTime:        time.Second * 2,
+			CircuitBreakerEnabled:    true,
 		},
 		Flags:       m.createOAuthFlags(),
 		Groups:      make(map[string]*FlagGroup),
@@ -914,9 +937,16 @@ func (m *flagManager) configReloadWorker() {
 		case <-ticker.C:
 			ctx := context.Background()
 			if err := m.ReloadConfiguration(ctx); err != nil {
-				m.auditor.Log(ctx, audit.ActionUpdate, "flag_configuration", "reload", "system", map[string]any{
-					"error": err.Error(),
-				})
+				m.auditor.Log(
+					ctx,
+					audit.ActionUpdate,
+					"flag_configuration",
+					"reload",
+					"system",
+					map[string]any{
+						"error": err.Error(),
+					},
+				)
 			}
 		}
 	}

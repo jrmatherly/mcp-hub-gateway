@@ -2,7 +2,11 @@ package features
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"sort"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -15,9 +19,9 @@ type metricsCollector struct {
 	cache cache.Cache
 
 	// Metrics storage
-	globalMetrics   *FlagMetrics
-	flagMetrics     map[FlagName]*FlagMetric
-	metricsMu       sync.RWMutex
+	globalMetrics *FlagMetrics
+	flagMetrics   map[FlagName]*FlagMetric
+	metricsMu     sync.RWMutex
 
 	// Background aggregation
 	stopChan      chan struct{}
@@ -36,8 +40,8 @@ func CreateMetricsCollector(cacheProvider cache.Cache) (MetricsCollector, error)
 	}
 
 	collector := &metricsCollector{
-		cache:           cacheProvider,
-		globalMetrics:   &FlagMetrics{
+		cache: cacheProvider,
+		globalMetrics: &FlagMetrics{
 			FlagEvaluations: make(map[FlagName]*FlagMetric),
 			ErrorsByType:    make(map[string]int64),
 			StartTime:       time.Now(),
@@ -331,7 +335,12 @@ func (m *metricsCollector) categorizeError(err error) string {
 
 func (m *metricsCollector) storeEvaluationInCache(ctx context.Context, eval *FlagEvaluation) {
 	// Store detailed evaluation for analysis
-	key := fmt.Sprintf("flag_eval:%s:%s:%d", eval.Flag, eval.EvaluationID, eval.Context.Timestamp.Unix())
+	key := fmt.Sprintf(
+		"flag_eval:%s:%s:%d",
+		eval.Flag,
+		eval.EvaluationID,
+		eval.Context.Timestamp.Unix(),
+	)
 
 	data, err := json.Marshal(eval)
 	if err != nil {
@@ -498,7 +507,10 @@ func (m *metricsCollector) GetTopFlags(ctx context.Context, limit int) ([]*FlagM
 }
 
 // GetFlagsByTrueRate returns flags sorted by their true rate
-func (m *metricsCollector) GetFlagsByTrueRate(ctx context.Context, ascending bool) ([]*FlagMetric, error) {
+func (m *metricsCollector) GetFlagsByTrueRate(
+	ctx context.Context,
+	ascending bool,
+) ([]*FlagMetric, error) {
 	m.metricsMu.RLock()
 	defer m.metricsMu.RUnlock()
 
@@ -567,7 +579,7 @@ func (m *metricsCollector) GetEvaluationHistory(
 		}
 
 		var eval FlagEvaluation
-		if err := json.Unmarshal(data.([]byte), &eval); err != nil {
+		if err := json.Unmarshal(data, &eval); err != nil {
 			continue
 		}
 

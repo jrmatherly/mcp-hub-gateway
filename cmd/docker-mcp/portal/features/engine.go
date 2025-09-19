@@ -5,14 +5,11 @@ import (
 	"crypto/md5"
 	"fmt"
 	"hash/fnv"
-	"math"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/google/uuid"
 )
 
 // evaluationEngine implements the EvaluationEngine interface
@@ -141,7 +138,11 @@ func (e *evaluationEngine) EvaluateConditions(
 	for _, condition := range conditions {
 		matched, err := e.evaluateCondition(ctx, &condition, evalCtx)
 		if err != nil {
-			return false, fmt.Errorf("failed to evaluate condition %s: %w", condition.Attribute, err)
+			return false, fmt.Errorf(
+				"failed to evaluate condition %s: %w",
+				condition.Attribute,
+				err,
+			)
 		}
 
 		// Apply negation if specified
@@ -329,7 +330,10 @@ func (e *evaluationEngine) evaluateRulesAndRollout(
 	}, nil
 }
 
-func (e *evaluationEngine) checkUserOverride(flag *FlagDefinition, evalCtx *EvaluationContext) (interface{}, bool) {
+func (e *evaluationEngine) checkUserOverride(
+	flag *FlagDefinition,
+	evalCtx *EvaluationContext,
+) (interface{}, bool) {
 	if flag.UserOverrides == nil {
 		return nil, false
 	}
@@ -342,7 +346,10 @@ func (e *evaluationEngine) checkUserOverride(flag *FlagDefinition, evalCtx *Eval
 	return nil, false
 }
 
-func (e *evaluationEngine) checkServerOverride(flag *FlagDefinition, evalCtx *EvaluationContext) (interface{}, bool) {
+func (e *evaluationEngine) checkServerOverride(
+	flag *FlagDefinition,
+	evalCtx *EvaluationContext,
+) (interface{}, bool) {
 	if flag.ServerOverrides == nil || evalCtx.ServerName == "" {
 		return nil, false
 	}
@@ -359,6 +366,7 @@ func (e *evaluationEngine) evaluateCondition(
 	condition *FlagCondition,
 	evalCtx *EvaluationContext,
 ) (bool, error) {
+	_ = ctx // Context reserved for future use (logging, tracing, cancellation)
 	// Get the actual value for the attribute
 	actualValue, err := e.getAttributeValue(condition.Attribute, evalCtx)
 	if err != nil {
@@ -406,7 +414,10 @@ func (e *evaluationEngine) evaluateCondition(
 	}
 }
 
-func (e *evaluationEngine) getAttributeValue(attribute string, evalCtx *EvaluationContext) (interface{}, error) {
+func (e *evaluationEngine) getAttributeValue(
+	attribute string,
+	evalCtx *EvaluationContext,
+) (interface{}, error) {
 	switch attribute {
 	case "user_id":
 		return evalCtx.UserID.String(), nil
@@ -515,7 +526,10 @@ func (e *evaluationEngine) matchesRegex(value, pattern interface{}) (bool, error
 	return regex.MatchString(valueStr), nil
 }
 
-func (e *evaluationEngine) matchesPercentage(value, percentage interface{}, evalCtx *EvaluationContext) bool {
+func (e *evaluationEngine) matchesPercentage(
+	_ interface{}, percentage interface{},
+	evalCtx *EvaluationContext,
+) bool {
 	percentageInt, err := e.toInt(percentage)
 	if err != nil {
 		return false
@@ -554,7 +568,10 @@ func (e *evaluationEngine) compareDates(actual, expected interface{}, operator s
 	}
 }
 
-func (e *evaluationEngine) evaluatePercentageRollout(config *RolloutConfig, evalCtx *EvaluationContext) (bool, error) {
+func (e *evaluationEngine) evaluatePercentageRollout(
+	config *RolloutConfig,
+	evalCtx *EvaluationContext,
+) (bool, error) {
 	if config.StartPercentage <= 0 {
 		return false, nil
 	}
@@ -570,7 +587,10 @@ func (e *evaluationEngine) evaluatePercentageRollout(config *RolloutConfig, eval
 	return bucket < config.StartPercentage, nil
 }
 
-func (e *evaluationEngine) evaluateCanaryRollout(config *RolloutConfig, evalCtx *EvaluationContext) (bool, error) {
+func (e *evaluationEngine) evaluateCanaryRollout(
+	config *RolloutConfig,
+	evalCtx *EvaluationContext,
+) (bool, error) {
 	if len(config.CanaryGroups) == 0 {
 		return false, nil
 	}
@@ -586,7 +606,10 @@ func (e *evaluationEngine) evaluateCanaryRollout(config *RolloutConfig, evalCtx 
 	return false, nil
 }
 
-func (e *evaluationEngine) evaluateScheduledRollout(config *RolloutConfig, evalCtx *EvaluationContext) (bool, error) {
+func (e *evaluationEngine) evaluateScheduledRollout(
+	config *RolloutConfig,
+	evalCtx *EvaluationContext,
+) (bool, error) {
 	if config.ScheduledRollout == nil {
 		return false, nil
 	}
@@ -603,7 +626,7 @@ func (e *evaluationEngine) evaluateScheduledRollout(config *RolloutConfig, evalC
 		return false, nil
 	}
 
-	if schedule.EndTime != nil && now.After(*schedule.EndTime) {
+	if !schedule.EndTime.IsZero() && now.After(schedule.EndTime) {
 		return true, nil // Schedule completed, full rollout
 	}
 
@@ -639,7 +662,10 @@ func (e *evaluationEngine) evaluateScheduledRollout(config *RolloutConfig, evalC
 	return bucket < currentPercentage, nil
 }
 
-func (e *evaluationEngine) evaluatePercentageRolloutSimple(percentage int, evalCtx *EvaluationContext) bool {
+func (e *evaluationEngine) evaluatePercentageRolloutSimple(
+	percentage int,
+	evalCtx *EvaluationContext,
+) bool {
 	if percentage <= 0 {
 		return false
 	}
@@ -710,7 +736,8 @@ func (e *evaluationEngine) toBool(value interface{}) bool {
 	case string:
 		return strings.ToLower(v) == "true" || v == "1"
 	case int, int32, int64:
-		return e.toInt(v) != 0
+		intVal, _ := e.toInt(v)
+		return intVal != 0
 	case float32, float64:
 		f, _ := e.toFloat64(v)
 		return f != 0

@@ -8,7 +8,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jrmatherly/mcp-hub-gateway/cmd/docker-mcp/portal/cache"
-	"github.com/jrmatherly/mcp-hub-gateway/cmd/docker-mcp/portal/database"
 	"github.com/jrmatherly/mcp-hub-gateway/cmd/docker-mcp/portal/oauth"
 	"github.com/jrmatherly/mcp-hub-gateway/cmd/docker-mcp/portal/security/audit"
 )
@@ -107,7 +106,7 @@ func ExampleUsage() {
 	authRequest := &oauth.AuthRequest{
 		RequestID:    uuid.New().String(),
 		ServerName:   "github-server",
-		UserID:       userID.String(),
+		UserID:       userID,
 		Method:       "GET",
 		URL:          "https://api.github.com/user",
 		Headers:      map[string]string{"Authorization": "Bearer token"},
@@ -318,14 +317,14 @@ func (m *mockResult) RowsAffected() int64 { return 1 }
 
 type mockCache struct{}
 
-func (m *mockCache) Get(ctx context.Context, key string) (interface{}, error) {
+func (m *mockCache) Get(ctx context.Context, key string) ([]byte, error) {
 	return nil, fmt.Errorf("not found")
 }
 
 func (m *mockCache) Set(
 	ctx context.Context,
 	key string,
-	value interface{},
+	value []byte,
 	ttl time.Duration,
 ) error {
 	return nil
@@ -335,28 +334,56 @@ func (m *mockCache) Delete(ctx context.Context, key string) error {
 	return nil
 }
 
-func (m *mockCache) Clear(ctx context.Context) error {
-	return nil
+func (m *mockCache) Exists(ctx context.Context, key string) (bool, error) {
+	return false, nil
 }
 
 func (m *mockCache) Decrement(ctx context.Context, key string, delta int64) (int64, error) {
 	return 0, nil
 }
 
-func (m *mockCache) Stats(ctx context.Context) (interface{}, error) {
-	return nil, nil
+func (m *mockCache) DeletePattern(ctx context.Context, pattern string) (int, error) {
+	return 0, nil
 }
 
 func (m *mockCache) Keys(ctx context.Context, pattern string) ([]string, error) {
 	return []string{}, nil
 }
 
-func (m *mockCache) MultiGet(ctx context.Context, keys []string) ([]interface{}, error) {
-	return []interface{}{}, nil
+func (m *mockCache) MultiGet(ctx context.Context, keys []string) (map[string][]byte, error) {
+	return map[string][]byte{}, nil
 }
 
 func (m *mockCache) Increment(ctx context.Context, key string, delta int64) (int64, error) {
 	return delta, nil
+}
+
+func (m *mockCache) MultiSet(ctx context.Context, items map[string]cache.CacheItem) error {
+	return nil
+}
+
+func (m *mockCache) MultiDelete(ctx context.Context, keys []string) error {
+	return nil
+}
+
+func (m *mockCache) TTL(ctx context.Context, key string) (time.Duration, error) {
+	return 0, nil
+}
+
+func (m *mockCache) Expire(ctx context.Context, key string, ttl time.Duration) error {
+	return nil
+}
+
+func (m *mockCache) Health(ctx context.Context) error {
+	return nil
+}
+
+func (m *mockCache) Info(ctx context.Context) (*cache.CacheInfo, error) {
+	return nil, nil
+}
+
+func (m *mockCache) FlushDB(ctx context.Context) error {
+	return nil
 }
 
 type mockAuditor struct{}
@@ -365,9 +392,60 @@ func (m *mockAuditor) Log(
 	ctx context.Context,
 	action audit.Action,
 	entityType, entityID, userID string,
-	metadata map[string]any,
-) {
+	metadata map[string]interface{},
+) error {
 	log.Printf("Audit: %s %s %s by %s", action, entityType, entityID, userID)
+	return nil
+}
+
+func (m *mockAuditor) GetLogs(
+	ctx context.Context,
+	userID uuid.UUID,
+	limit int,
+) ([]audit.AuditEntry, error) {
+	return []audit.AuditEntry{}, nil
+}
+
+func (m *mockAuditor) LogCommand(
+	ctx context.Context,
+	userID uuid.UUID,
+	command string,
+	args []string,
+) uuid.UUID {
+	log.Printf("Command: %s by %s", command, userID)
+	return uuid.New()
+}
+
+func (m *mockAuditor) LogCommandResult(
+	ctx context.Context,
+	auditID uuid.UUID,
+	result string,
+	err error,
+	duration time.Duration,
+) {
+	log.Printf("Command result: %s", result)
+}
+
+func (m *mockAuditor) LogSecurityEvent(
+	ctx context.Context,
+	userID uuid.UUID,
+	event audit.EventType,
+	details map[string]interface{},
+) {
+	log.Printf("Security event: %s by %s", event, userID)
+}
+
+func (m *mockAuditor) LogAccessDenied(
+	ctx context.Context,
+	userID uuid.UUID,
+	resource string,
+	reason string,
+) {
+	log.Printf("Access denied: %s to %s (%s)", userID, resource, reason)
+}
+
+func (m *mockAuditor) LogRateLimitExceeded(ctx context.Context, userID uuid.UUID, command string) {
+	log.Printf("Rate limit exceeded: %s for %s", userID, command)
 }
 
 type mockOAuthInterceptor struct{}

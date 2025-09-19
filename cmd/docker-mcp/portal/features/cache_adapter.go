@@ -21,7 +21,7 @@ func CreateCacheAdapter(c cache.Cache) CacheProvider {
 // Get retrieves a flag value from cache
 func (a *CacheAdapter) Get(ctx context.Context, key string) (*FlagValue, error) {
 	// Try to get as bytes first
-	data, err := a.cache.Get(ctx, key)
+	_, err := a.cache.Get(ctx, key)
 	if err != nil {
 		return nil, err
 	}
@@ -40,7 +40,12 @@ func (a *CacheAdapter) Get(ctx context.Context, key string) (*FlagValue, error) 
 }
 
 // Set stores a flag value in cache
-func (a *CacheAdapter) Set(ctx context.Context, key string, value *FlagValue, ttl time.Duration) error {
+func (a *CacheAdapter) Set(
+	ctx context.Context,
+	key string,
+	value *FlagValue,
+	ttl time.Duration,
+) error {
 	// In a real implementation, we would serialize the FlagValue to bytes
 	// For now, just call the underlying cache with mock data
 	mockData := []byte(`{"name":"mock","enabled":true}`)
@@ -66,12 +71,12 @@ func (a *CacheAdapter) Stats(ctx context.Context) (map[string]interface{}, error
 
 	// Convert CacheInfo to generic map
 	stats := map[string]interface{}{
-		"version":         info.Version,
-		"uptime":          info.Uptime,
-		"used_memory":     info.UsedMemory,
+		"version":           info.Version,
+		"uptime":            info.Uptime,
+		"used_memory":       info.UsedMemory,
 		"connected_clients": info.ConnectedClients,
-		"hit_rate":        info.HitRate,
-		"total_keys":      info.TotalKeys,
+		"hit_rate":          info.HitRate,
+		"total_keys":        info.TotalKeys,
 	}
 
 	return stats, nil
@@ -98,7 +103,12 @@ func (s *SimpleCacheAdapter) Get(ctx context.Context, key string) (*FlagValue, e
 }
 
 // Set stores a flag value in memory
-func (s *SimpleCacheAdapter) Set(ctx context.Context, key string, value *FlagValue, ttl time.Duration) error {
+func (s *SimpleCacheAdapter) Set(
+	ctx context.Context,
+	key string,
+	value *FlagValue,
+	ttl time.Duration,
+) error {
 	s.data[key] = value
 	return nil
 }
