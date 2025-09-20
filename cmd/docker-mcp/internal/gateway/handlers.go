@@ -66,9 +66,8 @@ func (g *Gateway) mcpServerToolHandler(
 	return func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		// Debug logging to stderr
 		if os.Getenv("DOCKER_MCP_TELEMETRY_DEBUG") != "" {
-			fmt.Fprintf(
-				os.Stderr,
-				"[MCP-HANDLER] Tool call received: %s from server: %s\n",
+			logf(
+				"[MCP-HANDLER] Tool call received: %s from server: %s",
 				req.Params.Name,
 				serverConfig.Name,
 			)
@@ -178,9 +177,8 @@ func (g *Gateway) mcpServerPromptHandler(
 	return func(ctx context.Context, req *mcp.GetPromptRequest) (*mcp.GetPromptResult, error) {
 		// Debug logging to stderr
 		if os.Getenv("DOCKER_MCP_TELEMETRY_DEBUG") != "" {
-			fmt.Fprintf(
-				os.Stderr,
-				"[MCP-HANDLER] Prompt get received: %s from server: %s\n",
+			logf(
+				"[MCP-HANDLER] Prompt get received: %s from server: %s",
 				req.Params.Name,
 				serverConfig.Name,
 			)
@@ -256,9 +254,8 @@ func (g *Gateway) mcpServerResourceHandler(
 	return func(ctx context.Context, req *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
 		// Debug logging to stderr
 		if os.Getenv("DOCKER_MCP_TELEMETRY_DEBUG") != "" {
-			fmt.Fprintf(
-				os.Stderr,
-				"[MCP-HANDLER] Resource read received: %s from server: %s\n",
+			logf(
+				"[MCP-HANDLER] Resource read received: %s from server: %s",
 				req.Params.URI,
 				serverConfig.Name,
 			)

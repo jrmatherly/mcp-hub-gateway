@@ -107,6 +107,9 @@ func (g *Gateway) Run(ctx context.Context) error {
 	g.transport = transport
 	defer g.transport.Close()
 
+	// Set the global transport for logging
+	SetGlobalTransport(transport)
+
 	// Record gateway start
 	transportMode := "stdio"
 	if g.Port != 0 {
@@ -291,8 +294,8 @@ func (g *Gateway) reloadConfiguration(
 ) error {
 	defer func() {
 		if r := recover(); r != nil {
-			// Use fmt.Fprintf to stderr for logging
-			fmt.Fprintf(os.Stderr, "Panic during configuration reload: %v\n", r)
+			// Use logf for panic messages
+			logf("Panic during configuration reload: %v", r)
 		}
 	}()
 
@@ -478,8 +481,7 @@ func (g *Gateway) periodicMetricExport(ctx context.Context) {
 	meterProvider := otel.GetMeterProvider()
 
 	if os.Getenv("DOCKER_MCP_TELEMETRY_DEBUG") != "" {
-		fmt.Fprintf(
-			os.Stderr,
+		logf(
 			"[MCP-TELEMETRY] Starting periodic metric export every %v\n",
 			interval,
 		)
@@ -489,7 +491,7 @@ func (g *Gateway) periodicMetricExport(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			if os.Getenv("DOCKER_MCP_TELEMETRY_DEBUG") != "" {
-				fmt.Fprintf(os.Stderr, "[MCP-TELEMETRY] Stopping periodic metric export\n")
+				log("[MCP-TELEMETRY] Stopping periodic metric export")
 			}
 			return
 		case <-ticker.C:
@@ -498,16 +500,16 @@ func (g *Gateway) periodicMetricExport(ctx context.Context) {
 				flushCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 				if err := mp.ForceFlush(flushCtx); err != nil {
 					if os.Getenv("DOCKER_MCP_TELEMETRY_DEBUG") != "" {
-						fmt.Fprintf(os.Stderr, "[MCP-TELEMETRY] Periodic flush error: %v\n", err)
+						logf("[MCP-TELEMETRY] Periodic flush error: %v", err)
 					}
 				} else {
 					if os.Getenv("DOCKER_MCP_TELEMETRY_DEBUG") != "" {
-						fmt.Fprintf(os.Stderr, "[MCP-TELEMETRY] Periodic metric flush successful\n")
+						log("[MCP-TELEMETRY] Periodic metric flush successful")
 					}
 				}
 				cancel()
 			} else if os.Getenv("DOCKER_MCP_TELEMETRY_DEBUG") != "" {
-				fmt.Fprintf(os.Stderr, "[MCP-TELEMETRY] WARNING: MeterProvider does not support ForceFlush\n")
+				log("[MCP-TELEMETRY] WARNING: MeterProvider does not support ForceFlush")
 			}
 		}
 	}
