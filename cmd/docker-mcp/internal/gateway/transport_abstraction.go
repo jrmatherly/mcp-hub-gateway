@@ -48,6 +48,13 @@ type MCPTransport interface {
 
 	// Close closes the transport connection
 	Close() error
+
+	// GetMetrics returns the metrics for this transport
+	// Returns nil if metrics are not enabled
+	GetMetrics() *TransportMetrics
+
+	// EnableMetrics enables or disables metrics collection
+	EnableMetrics(enabled bool)
 }
 
 // StderrLogger implements TransportLogger that always outputs to stderr
@@ -104,9 +111,11 @@ func (l *StderrLogger) IsQuiet() bool {
 
 // StdioTransportWrapper wraps stdio for MCP communication
 type StdioTransportWrapper struct {
-	stdin  io.Reader
-	stdout io.Writer
-	logger *StderrLogger
+	stdin          io.Reader
+	stdout         io.Writer
+	logger         *StderrLogger
+	metrics        *TransportMetrics
+	metricsEnabled bool
 }
 
 // NewStdioTransportWrapper creates a new stdio transport wrapper
@@ -150,13 +159,32 @@ func (t *StdioTransportWrapper) Close() error {
 	return nil
 }
 
+// GetMetrics returns the metrics for this transport
+func (t *StdioTransportWrapper) GetMetrics() *TransportMetrics {
+	if !t.metricsEnabled {
+		return nil
+	}
+	return t.metrics
+}
+
+// EnableMetrics enables or disables metrics collection
+func (t *StdioTransportWrapper) EnableMetrics(enabled bool) {
+	t.metricsEnabled = enabled
+	if enabled && t.metrics == nil {
+		t.metrics = NewTransportMetrics()
+		t.metrics.RecordConnection()
+	}
+}
+
 // HTTPTransportWrapper wraps HTTP for MCP communication
 type HTTPTransportWrapper struct {
-	server   *http.Server
-	listener net.Listener
-	logger   *StderrLogger
-	reader   io.Reader
-	writer   io.Writer
+	server         *http.Server
+	listener       net.Listener
+	logger         *StderrLogger
+	reader         io.Reader
+	writer         io.Writer
+	metrics        *TransportMetrics
+	metricsEnabled bool
 }
 
 // NewHTTPTransportWrapper creates a new HTTP transport wrapper
@@ -210,12 +238,30 @@ func (t *HTTPTransportWrapper) SetServer(server *http.Server) {
 	t.server = server
 }
 
+// GetMetrics returns the metrics for this transport
+func (t *HTTPTransportWrapper) GetMetrics() *TransportMetrics {
+	if !t.metricsEnabled {
+		return nil
+	}
+	return t.metrics
+}
+
+// EnableMetrics enables or disables metrics collection
+func (t *HTTPTransportWrapper) EnableMetrics(enabled bool) {
+	t.metricsEnabled = enabled
+	if enabled && t.metrics == nil {
+		t.metrics = NewTransportMetrics()
+	}
+}
+
 // SSETransportWrapper wraps Server-Sent Events for MCP communication
 type SSETransportWrapper struct {
-	server   *http.Server
-	listener net.Listener
-	logger   *StderrLogger
-	writer   io.Writer
+	server         *http.Server
+	listener       net.Listener
+	logger         *StderrLogger
+	writer         io.Writer
+	metrics        *TransportMetrics
+	metricsEnabled bool
 }
 
 // NewSSETransportWrapper creates a new SSE transport wrapper
@@ -260,6 +306,22 @@ func (t *SSETransportWrapper) Close() error {
 	return nil
 }
 
+// GetMetrics returns the metrics for this transport
+func (t *SSETransportWrapper) GetMetrics() *TransportMetrics {
+	if !t.metricsEnabled {
+		return nil
+	}
+	return t.metrics
+}
+
+// EnableMetrics enables or disables metrics collection
+func (t *SSETransportWrapper) EnableMetrics(enabled bool) {
+	t.metricsEnabled = enabled
+	if enabled && t.metrics == nil {
+		t.metrics = NewTransportMetrics()
+	}
+}
+
 // SetServer sets the HTTP server for this transport
 func (t *SSETransportWrapper) SetServer(server *http.Server) {
 	t.server = server
@@ -288,6 +350,12 @@ func (f *TransportFactory) CreateTransport(
 			return nil, fmt.Errorf("SSE transport requires a listener")
 		}
 		return NewSSETransportWrapper(listener), nil
+
+	case "websocket", "ws":
+		if listener == nil {
+			return nil, fmt.Errorf("WebSocket transport requires a listener")
+		}
+		return NewWebSocketTransportWrapper(listener, nil), nil
 
 	default:
 		return nil, fmt.Errorf("unknown transport type: %s", transportType)

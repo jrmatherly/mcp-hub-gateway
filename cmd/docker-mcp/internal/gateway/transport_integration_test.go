@@ -83,10 +83,13 @@ func (m *mockStdioTransport) IsProtocolChannel() bool { return true }
 func (m *mockStdioTransport) GetReader() io.Reader {
 	return strings.NewReader("")
 }
+
 func (m *mockStdioTransport) GetWriter() io.Writer {
 	return m.stdoutBuffer
 }
-func (m *mockStdioTransport) Close() error { return nil }
+func (m *mockStdioTransport) Close() error                  { return nil }
+func (m *mockStdioTransport) GetMetrics() *TransportMetrics { return nil }
+func (m *mockStdioTransport) EnableMetrics(enabled bool)    {}
 
 // Mock transport for integration testing
 type mockIntegrationTransport struct {
@@ -98,10 +101,12 @@ func (m *mockIntegrationTransport) Name() string { return m.name }
 func (m *mockIntegrationTransport) Logger() TransportLogger {
 	return &testStderrLogger{output: m.stderrOutput}
 }
-func (m *mockIntegrationTransport) IsProtocolChannel() bool { return false }
-func (m *mockIntegrationTransport) GetReader() io.Reader    { return nil }
-func (m *mockIntegrationTransport) GetWriter() io.Writer    { return nil }
-func (m *mockIntegrationTransport) Close() error            { return nil }
+func (m *mockIntegrationTransport) IsProtocolChannel() bool       { return false }
+func (m *mockIntegrationTransport) GetReader() io.Reader          { return nil }
+func (m *mockIntegrationTransport) GetWriter() io.Writer          { return nil }
+func (m *mockIntegrationTransport) Close() error                  { return nil }
+func (m *mockIntegrationTransport) GetMetrics() *TransportMetrics { return nil }
+func (m *mockIntegrationTransport) EnableMetrics(enabled bool)    {}
 
 // Test logger that writes to a buffer
 type testStderrLogger struct {

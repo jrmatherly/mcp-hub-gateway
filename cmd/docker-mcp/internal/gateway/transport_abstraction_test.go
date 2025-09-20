@@ -194,12 +194,14 @@ type mockTransport struct {
 	logger TransportLogger
 }
 
-func (m *mockTransport) Name() string            { return m.name }
-func (m *mockTransport) Logger() TransportLogger { return m.logger }
-func (m *mockTransport) IsProtocolChannel() bool { return true }
-func (m *mockTransport) GetReader() io.Reader    { return nil }
-func (m *mockTransport) GetWriter() io.Writer    { return nil }
-func (m *mockTransport) Close() error            { return nil }
+func (m *mockTransport) Name() string                  { return m.name }
+func (m *mockTransport) Logger() TransportLogger       { return m.logger }
+func (m *mockTransport) IsProtocolChannel() bool       { return true }
+func (m *mockTransport) GetReader() io.Reader          { return nil }
+func (m *mockTransport) GetWriter() io.Writer          { return nil }
+func (m *mockTransport) Close() error                  { return nil }
+func (m *mockTransport) GetMetrics() *TransportMetrics { return nil }
+func (m *mockTransport) EnableMetrics(enabled bool)    {}
 
 type mockLogger struct {
 	output *bytes.Buffer
