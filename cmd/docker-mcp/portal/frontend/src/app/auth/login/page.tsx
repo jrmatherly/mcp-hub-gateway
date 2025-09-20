@@ -120,18 +120,32 @@ export default function LoginPage() {
     try {
       authLogger.debug('Azure AD login initiated');
 
-      // Use MSAL redirect login for better compatibility
-      // Note: If Azure AD app is registered as "Web" instead of "SPA",
-      // you need to change it to "Single-page application" in Azure Portal
-      const loginResponse = await instance.loginPopup(loginRequest);
+      // Generate cryptographically secure state for CSRF protection
+      const state = crypto.randomUUID();
 
-      authLogger.info('Azure AD login successful', {
-        username: loginResponse.account?.username,
-        homeAccountId: loginResponse.account?.homeAccountId,
-      });
+      // Store state in sessionStorage for validation in callback
+      sessionStorage.setItem('oauth_state', state);
 
-      // The router.push will trigger the AuthGuard to check authentication
-      router.push('/dashboard');
+      // Store the current page for redirect after auth
+      const currentPath = window.location.pathname;
+      if (currentPath && currentPath !== '/auth/login') {
+        sessionStorage.setItem('auth_return_url', currentPath);
+      }
+
+      // Enhanced login request with state parameter
+      const enhancedLoginRequest = {
+        ...loginRequest,
+        state,
+        extraQueryParameters: {
+          state,
+        },
+      };
+
+      // Use redirect login for better OAuth flow handling
+      // This will redirect to /auth/callback after Azure AD authentication
+      await instance.loginRedirect(enhancedLoginRequest);
+
+      // Note: Code after loginRedirect won't execute as the page redirects
     } catch (azureError) {
       authLogger.error('Azure AD login failed', azureError);
 

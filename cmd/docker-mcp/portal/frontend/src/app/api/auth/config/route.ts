@@ -45,8 +45,8 @@ export async function GET() {
         Expires: '0',
       },
     });
-  } catch (error) {
-    console.error('Failed to generate auth config:', error);
+  } catch (_error) {
+    // Configuration error already handled
     return NextResponse.json(
       { error: 'Azure AD configuration not properly configured on server' },
       { status: 500 }

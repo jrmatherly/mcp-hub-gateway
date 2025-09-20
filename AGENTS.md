@@ -9,7 +9,7 @@ Instructions for AI coding assistants working on MCP Gateway & Portal.
 - **MCP Gateway CLI**: Docker plugin for MCP server management (Go 1.24+)
 - **MCP Portal**: Web UI that wraps the CLI - NOT a reimplementation (Go backend + Next.js)
 
-**Current Status**: Gateway CLI fully operational with SDK v0.5.0 and 75 tools. Portal Phase 4 (75% - test stabilization), Phase 5 OAuth (80% implemented, needs Azure integration)
+**Current Status**: Gateway CLI fully operational with SDK v0.5.0 and 75 tools. Portal Phase 4 (75% - test stabilization), Phase 5 OAuth (80% implemented, needs Azure integration). Transport Abstraction COMPLETE (all 3 phases)
 
 ## Setup Commands
 
@@ -80,16 +80,18 @@ go test -cover ./...
 
 ## Current Priorities
 
-1. **🔴 CRITICAL - Transport Integration**: Migrate 83 logging calls to use Transport Abstraction (currently 0 integrated)
-2. **🔴 CRITICAL - Test Coverage**: Expand from 11% to 50%+ for production readiness (6/9 packages stabilized)
-3. **🔴 CRITICAL - Azure OAuth Integration**: Complete createClientSecret and KeyVault storage implementations
-4. **🟡 IMPORTANT - Production Readiness**: Final security audit and performance validation
+1. **🔴 CRITICAL - Test Coverage**: Expand from 11% to 50%+ for production readiness (6/9 packages stabilized)
+2. **🔴 CRITICAL - Azure OAuth Integration**: Complete createClientSecret and KeyVault storage implementations
+3. **🟡 IMPORTANT - Production Readiness**: Final security audit and performance validation
 
 ## Known Issues
 
-- **Transport Abstraction**: Infrastructure created but not used - all logs still go to stdout instead of stderr
 - **Test Coverage**: Critically low at 11%, blocking production deployment
 - **OAuth Implementation**: Missing Azure Graph API and Key Vault integrations
+
+## Recent Achievements
+
+- **Transport Abstraction**: ✅ COMPLETE - All 83 logs now use transport logger with stderr routing, metrics, connection pooling, and WebSocket support
 
 ## Pull Request Guidelines
 

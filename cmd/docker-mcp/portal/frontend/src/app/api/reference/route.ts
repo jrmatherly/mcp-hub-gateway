@@ -16,7 +16,7 @@ const openApiSpec = {
     contact: {
       name: 'MCP Portal Team',
       email: 'support@matherly.net',
-      url: 'https://matherly.net',
+      url: process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
     },
     license: {
       name: 'MIT',
@@ -26,7 +26,7 @@ const openApiSpec = {
   servers: [
     {
       url: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080',
-      description: 'Portal Backend API',
+      description: 'MCP Portal Backend API',
     },
   ],
   paths: {
