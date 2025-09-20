@@ -46,11 +46,12 @@ debug.test
 cmd/docker-mcp/portal/frontend/public/robots.txt
 cmd/docker-mcp/portal/frontend/public/sitemap-0.xml
 cmd/docker-mcp/portal/frontend/public/sitemap.xml
+
 # Never track any .env files in TEMP_DEL
 TEMP_DEL/**/.env*
 TEMP_DEL/.env*
 TEMP_DEL/
 code-errors.txt
 
-# Docker CLI plugin binary
-docker-mcp
+# Docker CLI plugin binary (only the binary in root, not the source directory)
+/docker-mcp

@@ -80,9 +80,16 @@ go test -cover ./...
 
 ## Current Priorities
 
-1. **🔴 CRITICAL - Test Coverage**: Expand from 11% to 50%+ for production readiness (6/9 packages stabilized)
-2. **🔴 CRITICAL - Azure OAuth Integration**: Complete createClientSecret and KeyVault storage implementations
-3. **🟡 IMPORTANT - Production Readiness**: Final security audit and performance validation
+1. **🔴 CRITICAL - Transport Integration**: Migrate 83 logging calls to use Transport Abstraction (currently 0 integrated)
+2. **🔴 CRITICAL - Test Coverage**: Expand from 11% to 50%+ for production readiness (6/9 packages stabilized)
+3. **🔴 CRITICAL - Azure OAuth Integration**: Complete createClientSecret and KeyVault storage implementations
+4. **🟡 IMPORTANT - Production Readiness**: Final security audit and performance validation
+
+## Known Issues
+
+- **Transport Abstraction**: Infrastructure created but not used - all logs still go to stdout instead of stderr
+- **Test Coverage**: Critically low at 11%, blocking production deployment
+- **OAuth Implementation**: Missing Azure Graph API and Key Vault integrations
 
 ## Pull Request Guidelines
 

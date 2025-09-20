@@ -53,6 +53,9 @@ type Gateway struct {
 	registeredPromptNames          []string
 	registeredResourceURIs         []string
 	registeredResourceTemplateURIs []string
+
+	// Transport abstraction for channel separation
+	transport MCPTransport
 }
 
 func NewGateway(config Config, docker docker.Client) *Gateway {
@@ -85,6 +88,25 @@ func (g *Gateway) Run(ctx context.Context) error {
 	// Initialize telemetry
 	telemetry.Init()
 
+	// Initialize transport abstraction
+	var listener net.Listener
+	if g.Port != 0 {
+		var err error
+		listener, err = net.Listen("tcp", fmt.Sprintf(":%d", g.Port))
+		if err != nil {
+			return fmt.Errorf("failed to listen on port %d: %w", g.Port, err)
+		}
+		defer listener.Close()
+	}
+
+	factory := &TransportFactory{}
+	transport, err := factory.CreateTransport(strings.ToLower(g.Transport), listener)
+	if err != nil {
+		return fmt.Errorf("failed to create transport: %w", err)
+	}
+	g.transport = transport
+	defer g.transport.Close()
+
 	// Record gateway start
 	transportMode := "stdio"
 	if g.Port != 0 {
@@ -110,19 +132,6 @@ func (g *Gateway) Run(ctx context.Context) error {
 	}()
 
 	start := time.Now()
-
-	// Listen as early as possible to not lose client connections.
-	var ln net.Listener
-	if port := g.Port; port != 0 {
-		var (
-			lc  net.ListenConfig
-			err error
-		)
-		ln, err = lc.Listen(ctx, "tcp", fmt.Sprintf(":%d", port))
-		if err != nil {
-			return err
-		}
-	}
 
 	// Read the configuration.
 	configuration, configurationUpdates, stopConfigWatcher, err := g.configurator.Read(ctx)
@@ -216,7 +225,7 @@ func (g *Gateway) Run(ctx context.Context) error {
 		}
 
 		log("> Start streaming server on port", g.Port)
-		return g.startCentralStreamingServer(ctx, ln, configuration)
+		return g.startCentralStreamingServer(ctx, listener, configuration)
 	}
 
 	// Optionally watch for configuration updates.
@@ -260,11 +269,11 @@ func (g *Gateway) Run(ctx context.Context) error {
 
 	case "sse":
 		log("> Start sse server on port", g.Port)
-		return g.startSseServer(ctx, ln)
+		return g.startSseServer(ctx, listener)
 
 	case "http", "streamable", "streaming", "streamable-http":
 		log("> Start streaming server on port", g.Port)
-		return g.startStreamingServer(ctx, ln)
+		return g.startStreamingServer(ctx, listener)
 
 	default:
 		return fmt.Errorf(
