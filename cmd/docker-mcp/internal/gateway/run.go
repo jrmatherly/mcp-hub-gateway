@@ -79,6 +79,9 @@ func NewGateway(config Config, docker docker.Client) *Gateway {
 }
 
 func (g *Gateway) Run(ctx context.Context) error {
+	// Note: We no longer suppress logs in stdio mode
+	// All logs go to stderr which doesn't interfere with JSON-RPC on stdout
+
 	// Initialize telemetry
 	telemetry.Init()
 
@@ -251,6 +254,7 @@ func (g *Gateway) Run(ctx context.Context) error {
 	// Start the server
 	switch strings.ToLower(g.Transport) {
 	case "stdio":
+		// Note: We no longer suppress logs - they go to stderr
 		log("> Start stdio server")
 		return g.startStdioServer(ctx, os.Stdin, os.Stdout)
 
@@ -278,21 +282,17 @@ func (g *Gateway) reloadConfiguration(
 ) error {
 	defer func() {
 		if r := recover(); r != nil {
-			// Use fmt.Printf for logging since log is redefined as a function variable below
-			fmt.Printf("Panic during configuration reload: %v\n", r)
+			// Use fmt.Fprintf to stderr for logging
+			fmt.Fprintf(os.Stderr, "Panic during configuration reload: %v\n", r)
 		}
 	}()
-
-	// Handle logging function - use fmt.Printf as default
-	log := func(msgs ...any) {
-		fmt.Println(msgs...)
-	}
 
 	// If serverNames is nil, get them from configuration
 	if serverNames == nil {
 		serverNames = configuration.ServerNames()
 	}
 
+	// Always log server status to stderr using the global log function
 	if len(serverNames) == 0 {
 		log("- No server is enabled")
 	} else {
@@ -362,6 +362,7 @@ func (g *Gateway) reloadConfiguration(
 	}
 
 	g.health.SetHealthy()
+	// Always log success status to stderr (log function outputs to stderr)
 	log("Successfully reloaded configuration with", len(capabilities.Tools), "tools,",
 		len(capabilities.Prompts), "prompts,", len(capabilities.Resources), "resources,",
 		len(capabilities.ResourceTemplates), "resource templates")

@@ -22,6 +22,8 @@ coverage.out
 
 # Logs
 *.log
+stderr.txt
+stdout.txt
 
 # Temporary files
 *.tmp

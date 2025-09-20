@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"bytes"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -21,15 +21,36 @@ func thisIsAnIntegrationTest(t *testing.T) {
 	}
 }
 
-func runDockerMCP(t *testing.T, args ...string) string {
+// runDockerMCPWithStreams separates stdout and stderr for proper protocol testing
+func runDockerMCPWithStreams(t *testing.T, args ...string) (stdout, stderr string) {
 	t.Helper()
 	args = append([]string{"mcp"}, args...)
-	fmt.Println(args)
-	cmd := exec.CommandContext(t.Context(), "docker", args...)
-	out, err := cmd.CombinedOutput()
-	require.NoError(t, err, string(out))
+	t.Logf("[%s]", strings.Join(args, " "))
 
-	return string(out)
+	cmd := exec.CommandContext(t.Context(), "docker", args...)
+
+	var stdoutBuf, stderrBuf bytes.Buffer
+	cmd.Stdout = &stdoutBuf
+	cmd.Stderr = &stderrBuf
+
+	err := cmd.Run()
+	if err != nil {
+		t.Logf("Command failed: %v", err)
+		t.Logf("Stdout: %s", stdoutBuf.String())
+		t.Logf("Stderr: %s", stderrBuf.String())
+		require.NoError(t, err)
+	}
+
+	return stdoutBuf.String(), stderrBuf.String()
+}
+
+// runDockerMCP maintains backward compatibility by combining stdout and stderr
+func runDockerMCP(t *testing.T, args ...string) string {
+	t.Helper()
+	stdout, stderr := runDockerMCPWithStreams(t, args...)
+	// For backward compatibility, combine output (stderr first, then stdout)
+	// This matches the behavior of CombinedOutput which interleaves streams
+	return stderr + stdout
 }
 
 func writeFile(t *testing.T, parent, name string, content string) {
@@ -140,13 +161,20 @@ func TestIntegrationCatalogShow(t *testing.T) {
 
 func TestIntegrationDryRunEmpty(t *testing.T) {
 	thisIsAnIntegrationTest(t)
-	out := runDockerMCP(t, "gateway", "run", "--dry-run", "--servers=")
-	assert.Contains(t, out, "Initialized in")
+	stdout, stderr := runDockerMCPWithStreams(t, "gateway", "run", "--dry-run", "--servers=")
+
+	// Operational logs should be in stderr
+	// Note: Even with --servers=, the gateway loads default servers
+	assert.Contains(t, stderr, "- Those servers are enabled")
+	assert.Contains(t, stderr, "Initialized in")
+
+	// stdout should be empty for dry-run (no protocol messages)
+	assert.Empty(t, stdout, "stdout should be empty in dry-run mode")
 }
 
 func TestIntegrationDryRunFetch(t *testing.T) {
 	thisIsAnIntegrationTest(t)
-	out := runDockerMCP(
+	stdout, stderr := runDockerMCPWithStreams(
 		t,
 		"gateway",
 		"run",
@@ -154,8 +182,14 @@ func TestIntegrationDryRunFetch(t *testing.T) {
 		"--servers=fetch",
 		"--catalog="+catalog.DockerCatalogURL,
 	)
-	assert.Contains(t, out, "fetch: (1 tools)")
-	assert.Contains(t, out, "Initialized in")
+
+	// Check stderr for operational messages
+	assert.Contains(t, stderr, "- Those servers are enabled: fetch")
+	assert.Contains(t, stderr, "fetch: (1 tools)")
+	assert.Contains(t, stderr, "Initialized in")
+
+	// stdout should be empty for dry-run
+	assert.Empty(t, stdout, "stdout should be empty in dry-run mode")
 }
 
 func TestIntegrationCallToolClickhouse(t *testing.T) {
@@ -180,16 +214,21 @@ func TestIntegrationCallToolClickhouse(t *testing.T) {
 		"--verbose",
 	}
 
-	out := runDockerMCP(
+	stdout, stderr := runDockerMCPWithStreams(
 		t,
 		"tools",
 		"call",
 		"--gateway-arg="+strings.Join(gatewayArgs, ","),
 		"list_databases",
 	)
-	assert.Contains(t, out, "amazon")
-	assert.Contains(t, out, "bluesky")
-	assert.Contains(t, out, "country")
+
+	// Protocol response should be in stdout
+	assert.Contains(t, stdout, "amazon")
+	assert.Contains(t, stdout, "bluesky")
+	assert.Contains(t, stdout, "country")
+
+	// Operational logs can be in stderr (ignored for protocol tests)
+	_ = stderr
 }
 
 func TestIntegrationCallToolDuckDuckDb(t *testing.T) {
@@ -199,7 +238,7 @@ func TestIntegrationCallToolDuckDuckDb(t *testing.T) {
 		"--catalog=" + catalog.DockerCatalogURL,
 	}
 
-	out := runDockerMCP(
+	stdout, stderr := runDockerMCPWithStreams(
 		t,
 		"tools",
 		"call",
@@ -207,5 +246,10 @@ func TestIntegrationCallToolDuckDuckDb(t *testing.T) {
 		"search",
 		"query=Docker",
 	)
-	assert.Contains(t, out, "Found 10 search results")
+
+	// Protocol response should be in stdout
+	assert.Contains(t, stdout, "Found 10 search results")
+
+	// Operational logs can be in stderr (ignored for protocol tests)
+	_ = stderr
 }
